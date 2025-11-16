@@ -28,22 +28,12 @@ export class Interpreter {
       if (expr.type === "Label") {
         this.context.setLabel(expr.name, i);
       }
-      if (expr.type === "FuncDecl") {
-        this.context.setFunc(
-          expr.name,
-          { params: expr.params, body: expr.body, type: "GosFunc" },
-        );
-        return;
-      }
     }
 
-    const executable = program.body.filter((a) =>
-      a.type !== "Label" && a.type !== "FuncDecl"
-    );
     while (
-      this.pc < executable.length
+      this.pc < program.body.length
     ) {
-      const expr = executable[this.pc];
+      const expr = program.body[this.pc];
       result = await this.eval(expr);
       this.pc++;
     }
@@ -159,7 +149,6 @@ export class Interpreter {
         return;
       }
       case "Label": {
-        this.context.setLabel(expr.name, this.pc);
         return;
       }
       case "Del": {

@@ -1,12 +1,11 @@
-
 let n = 10
 
-N = false 
+N = false # no newline when print values
 goto label
-del n 
+del n # this expression will be skipped
 
 label:
 out n
 out ' '
 n--
-if n != 0 goto label
+if n != 0 goto label # Output: 10 9 8 7 6 5 4 3 2 1

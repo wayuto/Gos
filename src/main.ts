@@ -43,22 +43,25 @@ const repl = async (): Promise<void> => {
 };
 
 const main = async (): Promise<void> => {
-  await new Command()
-    .name("gos")
-    .version("v0.1.7")
-    .description("Gos Interpreter")
-    .meta("License", "MIT")
-    .command("run <file:string>", "Run a Gos source file")
-    .action(async (_, file: string) => {
-      await run(file);
-    })
-    .command("repl", "Gos REPL")
-    .action(() => repl())
-    .command("ast <file:string>", "Show the AST of a Gos source file")
-    .action(async (_, file: string) => {
-      await printAST(file);
-    })
-    .parse(Deno.args);
+  if (Deno.args.length === 0) await repl();
+  else {
+    await new Command()
+      .name("gos")
+      .version("v0.1.8")
+      .description("Gos Interpreter")
+      .meta("License", "MIT")
+      .command("run <file:string>", "Run a Gos source file")
+      .action(async (_, file: string) => {
+        await run(file);
+      })
+      .command("repl", "Gos REPL")
+      .action(async () => await repl())
+      .command("ast <file:string>", "Show the AST of a Gos source file")
+      .action(async (_, file: string) => {
+        await printAST(file);
+      })
+      .parse(Deno.args);
+  }
 };
 
 if (import.meta.main) await main();

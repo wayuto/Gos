@@ -11,7 +11,7 @@ Deno.test("Context", () => {
   assertEquals(var_, 1);
 });
 
-Deno.test("Interpreter", () => {
+Deno.test("Interpreter", async () => {
   const code = `
     fun f(x) {
       if (x <= 1) return x
@@ -35,7 +35,7 @@ Deno.test("Interpreter", () => {
   const ast = parser.parse();
   const context = new Context();
   const interpreter = new Interpreter(context);
-  const result = interpreter.execute(ast);
+  const result = await interpreter.execute(ast);
 
   assertEquals(result, 55);
 });
