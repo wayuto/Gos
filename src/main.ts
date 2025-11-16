@@ -45,7 +45,7 @@ const repl = async (): Promise<void> => {
 const main = async (): Promise<void> => {
   await new Command()
     .name("gos")
-    .version("v0.1.5")
+    .version("v0.1.7")
     .description("Gos Interpreter")
     .meta("License", "MIT")
     .command("run <file:string>", "Run a Gos source file")
