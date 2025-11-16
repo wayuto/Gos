@@ -1,7 +1,8 @@
-import { Expression, Program } from "./ast.ts";
-import { Lexer, Literal, TokenType } from "./lexer.ts";
+import type { Expression, Program } from "./ast.ts";
+import { type Lexer, type Literal, TokenType } from "./lexer.ts";
 import { err } from "./utils.ts";
 
+/**Parser */
 export class Parser {
   private lexer: Lexer;
   constructor(lexer: Lexer) {
@@ -149,7 +150,7 @@ export class Parser {
       case TokenType.WHILE:
       case TokenType.LBRACE: {
         return this.ctrl();
-      }
+      } // to make statement be a expression
       default: {
         return this.logical();
       }

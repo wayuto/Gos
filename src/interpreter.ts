@@ -1,11 +1,19 @@
-import { BinOp, Expression, NativeFunc, Program, Value, Var } from "./ast.ts";
-import { Context, GosFunc } from "./context.ts";
-import { Literal, TokenType } from "./lexer.ts";
+import type {
+  BinOp,
+  Expression,
+  NativeFunc,
+  Program,
+  Value,
+  Var,
+} from "./ast.ts";
+import type { Context, GosFunc } from "./context.ts";
+import { type Literal, TokenType } from "./lexer.ts";
 import { err } from "./utils.ts";
 
+/**Interpreter */
 export class Interpreter {
   private context: Context;
-  private pc: number = 0;
+  private pc: number = 0; // program counter
 
   constructor(ctx: Context) {
     this.context = ctx;

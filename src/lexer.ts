@@ -54,6 +54,7 @@ type Token = {
   value?: Literal;
 };
 
+/**Lexer */
 export class Lexer {
   private src: string;
   private pos: number;

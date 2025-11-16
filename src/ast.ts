@@ -1,4 +1,4 @@
-import { Literal, TokenType } from "./lexer.ts";
+import type { Literal, TokenType } from "./lexer.ts";
 
 export type NodeType =
   | "Program"
@@ -149,7 +149,7 @@ export interface FuncCall extends Node {
 export interface NativeFunc extends Node {
   type: "NativeFunc";
   fn: (...args: Literal[]) => Literal;
-}
+} // typescript functions
 
 export interface Return extends Node {
   type: "Return";

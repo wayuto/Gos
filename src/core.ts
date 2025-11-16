@@ -1,4 +1,4 @@
-import { NativeFunc } from "./ast.ts";
+import type { NativeFunc } from "./ast.ts";
 
 export const nativeFuncs: Record<string, NativeFunc> = {
   abs: {
