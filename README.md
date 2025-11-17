@@ -38,7 +38,7 @@ feature support)_
 - _**Import necessary modules**_
 
 ```typescript
-// legacy interpreter
+// tree-walking
 import { Context, Interpreter, Lexer, Parser } from "jsr:@wayuto/gos";
 
 // bytecode
@@ -54,19 +54,24 @@ const lexer = new Lexer(code);
 const parser = new Parser(lexer);
 const ast = parser.parse();
 
-// legacy interpreter
+// tree-walking
 const context = new Context();
 const interpreter = new Interpreter(context);
 
 // bytecode
 const compiler = new Compiler();
 const { chunk, maxSlot } = compiler.compile(ast);
+const gvm = new GVM(chunk, maxSlot);
 ```
 
 - _**Execution**_
 
 ```typescript
+// tree-walking
 interpreter.execute(ast);
+
+// bytecode
+gvm.run();
 ```
 
 ## _Supported Features:_
