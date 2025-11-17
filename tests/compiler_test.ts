@@ -13,7 +13,7 @@ Deno.test("Compiler", () => {
   const compiler = new Compiler();
   const { chunk, maxSlot } = compiler.compile(ast);
   assertEquals(chunk, {
-    code: new Uint8Array([0, 0, 0, 1, 3, 0, 2, 5, 2, 0, 1, 0, 12, 13]),
+    code: new Uint8Array([0, 0, 0, 1, 3, 0, 2, 5, 2, 0, 1, 0, 12, 15]),
     constants: [1, 2, 3],
   });
   assertEquals(maxSlot, 1);

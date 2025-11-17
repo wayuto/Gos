@@ -2,7 +2,8 @@
 
 ### _A simple interpreter implementing in `TypeScript`_
 
-_Now the interpretersupports both `Tree-walking` and `GVM`(Experimental)_
+_Now the interpretersupports both `Tree-walking` and `GVM`(Experimental, limited
+feature support)_
 
 ## _**Getting Started**_
 
