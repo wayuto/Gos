@@ -3,21 +3,18 @@ import type {
   Expression,
   NativeFunc,
   Program,
-  Value,
+  Val,
   Var,
-} from "./ast.ts";
+} from "../ast.ts";
 import type { Context, GosFunc } from "./context.ts";
-import { type Literal, TokenType } from "./lexer.ts";
-import { err } from "./utils.ts";
+import { type Literal, TokenType } from "../lexer.ts";
+import { err } from "../utils.ts";
 
 /**Interpreter */
 export class Interpreter {
-  private context: Context;
   private pc: number = 0; // program counter
 
-  constructor(ctx: Context) {
-    this.context = ctx;
-  }
+  constructor(private context: Context) {}
 
   public execute = async (program: Program): Promise<Literal> => {
     let result: Literal = undefined;
@@ -42,8 +39,8 @@ export class Interpreter {
 
   private eval = async (expr: Expression): Promise<Literal> => {
     switch (expr.type) {
-      case "Value": {
-        return (expr as Value).value;
+      case "Val": {
+        return (expr as Val).value;
       }
       case "BinOp": {
         const binNode = expr as BinOp;

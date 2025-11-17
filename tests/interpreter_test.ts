@@ -1,8 +1,5 @@
-import { assertEquals } from "@std/assert";
-import { Lexer } from "../src/lexer.ts";
-import { Parser } from "../src/parser.ts";
-import { Interpreter } from "../src/interpreter.ts";
-import { Context } from "../src/context.ts";
+import { Context, Interpreter, Lexer, Parser } from "@wayuto/gos";
+import { assertEquals } from "@std/assert/equals";
 
 Deno.test("Context", () => {
   const context = new Context();

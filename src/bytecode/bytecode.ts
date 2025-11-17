@@ -1,0 +1,18 @@
+export const enum Op {
+  LOAD_CONST,
+  LOAD_VAR,
+  STORE_VAR,
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  NEG,
+  POS,
+  INC,
+  DEC,
+  LOG_NOT,
+  OUT,
+  JUMP,
+  JUMP_IF_FALSE,
+  HALT,
+}

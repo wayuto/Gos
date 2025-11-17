@@ -1,7 +1,7 @@
-import type { Expression, NativeFunc } from "./ast.ts";
+import type { Expression, NativeFunc } from "../ast.ts";
+import type { Literal } from "../lexer.ts";
+import { err } from "../utils.ts";
 import { nativeFuncs } from "./core.ts";
-import type { Literal } from "./lexer.ts";
-import { err } from "./utils.ts";
 
 export type GosFunc = { params: string[]; body: Expression; type: string }; // functions defined in `gos` code
 

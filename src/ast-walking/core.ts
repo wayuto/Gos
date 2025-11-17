@@ -1,5 +1,5 @@
-import type { NativeFunc } from "./ast.ts";
-import type { Literal } from "./lexer.ts";
+import type { NativeFunc } from "../ast.ts";
+import type { Literal } from "../lexer.ts";
 
 export const nativeFuncs: Record<string, NativeFunc> = {
   abs: {

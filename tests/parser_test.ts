@@ -10,7 +10,7 @@ Deno.test("Parser", () => {
   assertEquals(ast, {
     type: "Program",
     body: [
-      { type: "VarDecl", name: "x", value: { type: "Value", value: 1 } },
+      { type: "VarDecl", name: "x", value: { type: "Val", value: 1 } },
     ],
   });
 });

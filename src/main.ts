@@ -1,8 +1,5 @@
-import { Context } from "./context.ts";
-import { Interpreter } from "./interpreter.ts";
-import { Lexer } from "./lexer.ts";
-import { Parser } from "./parser.ts";
 import { Command } from "@cliffy/command";
+import { Context, Interpreter, Lexer, Parser } from "@wayuto/gos";
 
 const run = async (file: string): Promise<void> => {
   const src = await Deno.readTextFile(file);
@@ -47,7 +44,7 @@ const main = async (): Promise<void> => {
   else {
     await new Command()
       .name("gos")
-      .version("v0.1.8")
+      .version("v0.1.9")
       .description("Gos Interpreter")
       .meta("License", "MIT")
       .command("run <file:string>", "Run a Gos source file")

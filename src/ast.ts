@@ -2,7 +2,7 @@ import type { Literal, TokenType } from "./lexer.ts";
 
 export type NodeType =
   | "Program"
-  | "Value"
+  | "Val"
   | "BinOp"
   | "UnaryOp"
   | "VarDecl"
@@ -32,7 +32,7 @@ export interface Program extends Node {
 }
 
 export type Expression =
-  | Value
+  | Val
   | BinOp
   | UnaryOp
   | VarDecl
@@ -51,8 +51,8 @@ export type Expression =
   | Return
   | Exit;
 
-export interface Value extends Node {
-  type: "Value";
+export interface Val extends Node {
+  type: "Val";
   value: Literal;
 }
 

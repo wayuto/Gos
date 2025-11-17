@@ -249,7 +249,7 @@ export class Parser {
       const value = this.lexer
         .currentToken().value as Literal;
       this.lexer.nextToken();
-      return { type: "Value", value };
+      return { type: "Val", value };
     }
 
     if (typ === TokenType.IDENT) {

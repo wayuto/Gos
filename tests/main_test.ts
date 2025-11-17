@@ -1,5 +1,5 @@
-import { Context } from "../src/context.ts";
-import { Interpreter } from "../src/interpreter.ts";
+import { Context } from "../src/ast-walking/context.ts";
+import { Interpreter } from "../src/ast-walking/interpreter.ts";
 import { Lexer } from "../src/lexer.ts";
 import { Parser } from "../src/parser.ts";
 

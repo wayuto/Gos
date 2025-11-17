@@ -1,49 +1,49 @@
 import { err, isalpha, isdigit } from "./utils.ts";
 
 export const enum TokenType {
-  OP_ADD = "OP_ADD",
-  OP_SUB = "OP_SUB",
-  OP_MUL = "OP_MUL",
-  OP_DIV = "OP_DIV",
-  OP_NEG = "OP_NEG",
-  OP_POS = "OP_POS",
-  OP_INC = "OP_INC",
-  OP_DEC = "OP_DEC",
-  OP_EQ = "OP_EQ",
-  COMP_EQ = "COMP_EQ",
-  COMP_NE = "COMP_NE",
-  COMP_GT = "COMP_GT",
-  COMP_GE = "COMP_GE",
-  COMP_LT = "COMP_LT",
-  COMP_LE = "COMP_LE",
-  COMP_AND = "COMP_AND",
-  COMP_OR = "COMP_OR",
-  LOG_NOT = "LOG_NOT",
-  LOG_AND = "LOG_AND",
-  LOG_OR = "LOG_OR",
-  LOG_XOR = "LOG_XOR",
-  LITERAL = "LITERAL",
-  LPAREN = "LPAREN",
-  RPAREN = "RPAREN",
-  LBRACE = "LBRACE",
-  RBRACE = "RBRACE",
-  COLON = "COLON",
-  VAR_DECL = "VAR_DECL",
-  VAR_DEL = "DEL",
-  VAR = "VAR",
-  IN = "IN",
-  OUT = "OUT",
-  IF = "IF",
-  ELSE = "ELSE",
-  WHILE = "WHILE",
-  LABEL = "LABEL",
-  GOTO = "GOTO",
-  EXIT = "EXIT",
-  FUNC_DECL = "FUNC_DECL",
-  CALL = "CALL",
-  RETURN = "RETURN",
-  IDENT = "IDENT",
-  EOF = "EOF",
+  OP_ADD,
+  OP_SUB,
+  OP_MUL,
+  OP_DIV,
+  OP_NEG,
+  OP_POS,
+  OP_INC,
+  OP_DEC,
+  OP_EQ,
+  COMP_EQ,
+  COMP_NE,
+  COMP_GT,
+  COMP_GE,
+  COMP_LT,
+  COMP_LE,
+  COMP_AND,
+  COMP_OR,
+  LOG_NOT,
+  LOG_AND,
+  LOG_OR,
+  LOG_XOR,
+  LITERAL,
+  LPAREN,
+  RPAREN,
+  LBRACE,
+  RBRACE,
+  COLON,
+  VAR_DECL,
+  VAR_DEL,
+  VAR,
+  IN,
+  OUT,
+  IF,
+  ELSE,
+  WHILE,
+  LABEL,
+  GOTO,
+  EXIT,
+  FUNC_DECL,
+  CALL,
+  RETURN,
+  IDENT,
+  EOF,
 }
 
 export type Literal = string | number | boolean | void;
@@ -56,12 +56,10 @@ type Token = {
 
 /**Lexer */
 export class Lexer {
-  private src: string;
   private pos: number;
   private tok: Token;
 
-  constructor(code: string) {
-    this.src = code;
+  constructor(private src: string) {
     this.pos = 0;
     this.tok = { type: TokenType.EOF };
   }
@@ -114,9 +112,16 @@ export class Lexer {
     return alpha;
   };
 
-  private isPrefix = (): boolean =>
-    this.tok.type === TokenType.EOF ||
-    this.tok.type === TokenType.LPAREN;
+  private isPrefix = (): boolean => {
+    const prev = this.pos > 0 ? this.src[this.pos - 1] : " ";
+    return (
+      this.tok.type === TokenType.EOF ||
+      this.tok.type === TokenType.LPAREN ||
+      this.tok.type === TokenType.OP_EQ ||
+      this.tok.type === TokenType.COLON ||
+      prev === "=" || prev === "(" || prev === ":"
+    );
+  };
 
   public nextToken = (): void => {
     this.skipSpaces();
@@ -235,6 +240,7 @@ export class Lexer {
     } else if (this.current() === "-") {
       if (this.isPrefix()) {
         this.tok = { type: TokenType.OP_NEG };
+        this.bump();
         return;
       }
       this.bump();
@@ -244,7 +250,6 @@ export class Lexer {
         return;
       } else {
         this.tok = { type: TokenType.OP_SUB };
-        this.bump();
         return;
       }
     } else if (this.current() === "*") {
