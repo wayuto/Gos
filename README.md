@@ -1,6 +1,8 @@
 # _The Gos Programming Language_
 
-_A `Tree-walking` interpreter implementing in `TypeScript`_
+### _A simple interpreter implementing in `TypeScript`_
+
+_Now the interpretersupports both `Tree-walking` and `GVM`(Experimental)_
 
 ## _**Getting Started**_
 
@@ -35,7 +37,11 @@ _A `Tree-walking` interpreter implementing in `TypeScript`_
 - _**Import necessary modules**_
 
 ```typescript
+// legacy interpreter
 import { Context, Interpreter, Lexer, Parser } from "jsr:@wayuto/gos";
+
+// bytecode
+import { Compiler, GVM, Lexer, Parser } from "@wayuto/gos";
 ```
 
 - _**Initialization**_
@@ -46,8 +52,14 @@ const code = "out 'Hello world!'";
 const lexer = new Lexer(code);
 const parser = new Parser(lexer);
 const ast = parser.parse();
+
+// legacy interpreter
 const context = new Context();
 const interpreter = new Interpreter(context);
+
+// bytecode
+const compiler = new Compiler();
+const { chunk, maxSlot } = compiler.compile(ast);
 ```
 
 - _**Execution**_
