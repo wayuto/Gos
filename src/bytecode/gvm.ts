@@ -13,7 +13,7 @@ export class GVM {
     this.slots = new Array<Literal>(this.maxSlot);
   }
 
-  public run = () => {
+  public run = (): void => {
     while (true) {
       const op = this.chunk.code[this.ip++];
       switch (op) {
