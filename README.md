@@ -12,26 +12,28 @@ feature support)_
 ```bash
 ➜  deno install -A -n --global gos jsr:@wayuto/gos/gos
 ➜  gos -h    
+Usage:   gos   
+Version: v0.2.0
 
-  Usage:   gos 
-  Version: [VERSION]
+License: MIT
 
-  License: MIT
+Description:
 
-  Description:
+  Gos Interpreter
 
-    Gos Interpreter
+Options:
 
-  Options:
+  -h, --help     - Show this help.                            
+  -V, --version  - Show the version number for this program.  
 
-    -h, --help     - Show this help.                            
-    -V, --version  - Show the version number for this program.  
+Commands:
 
-  Commands:
+  repl          - Gos REPL                                        
+  gvm   <file>  - Run a Gos source file by bytecode (Experimental)
+  run   <file>  - Run a Gos source file by ast-walking            
+  ast   <file>  - Show the AST of a Gos source file               
 
-    run   <file>  - Run a Gos source file            
-    repl          - Gos REPL                         
-    ast   <file>  - Show the AST of a Gos source file
+➜  Gos git:(main) ✗
 ```
 
 - ### _**In TypeScript**_
@@ -69,7 +71,6 @@ const gvm = new GVM(chunk, maxSlot);
 ```typescript
 // tree-walking
 interpreter.execute(ast);
-
 // bytecode
 gvm.run();
 ```
