@@ -1,17 +1,19 @@
 import { Compiler, GVM, Lexer, Parser } from "@wayuto/gos";
+import { dis } from "../src/bytecode/bytecode.ts";
 
 const code = `
-let i = 10
-while (i != 0) {
-out i
+let n = 10
+while (n > 0) {
+  out n
+  n--
 }
 `;
 
 const lexer = new Lexer(code);
 const parser = new Parser(lexer);
 const ast = parser.parse();
-console.log(ast);
 const compiler = new Compiler();
 const { chunk, maxSlot } = compiler.compile(ast);
+dis(chunk);
 const gvm = new GVM(chunk, maxSlot);
 gvm.run();
