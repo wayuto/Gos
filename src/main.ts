@@ -2,6 +2,7 @@ import { Command } from "@cliffy/command";
 import {
   Compiler,
   Context,
+  dis,
   GVM,
   Interpreter,
   Lexer,
@@ -49,6 +50,18 @@ const printPreprocessed = async (file: string): Promise<void> => {
   console.log(code);
 };
 
+const printBytecode = async (file: string): Promise<void> => {
+  const src = await Deno.readTextFile(file);
+  const preprocessor = new Preprocessor(src);
+  const code = await preprocessor.preprocess();
+  const lexer = new Lexer(code);
+  const parser = new Parser(lexer);
+  const ast = parser.parse();
+  const compiler = new Compiler();
+  const { chunk } = compiler.compile(ast);
+  dis(chunk);
+};
+
 const repl = async (): Promise<void> => {
   console.log("Gos REPL");
 
@@ -74,7 +87,7 @@ const main = async (): Promise<void> => {
   else {
     await new Command()
       .name("gos")
-      .version("v0.2.4")
+      .version("v0.2.5")
       .description("Gos Interpreter")
       .meta("License", "MIT")
       .command("repl", "Gos REPL")
@@ -99,6 +112,10 @@ const main = async (): Promise<void> => {
         "Show the proprecessed Gos source file",
       ).action(async (_, file: string) => {
         await printPreprocessed(file);
+      })
+      .command("dis <file:string>", "Show the bytecode of a Gos source file")
+      .action(async (_, file: string) => {
+        printBytecode(file);
       })
       .parse(Deno.args);
   }

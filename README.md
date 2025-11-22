@@ -12,8 +12,9 @@ feature support)_
 ```bash
 ➜  deno install -A -n --global gos jsr:@wayuto/gos/gos
 ➜  gos -h
+
 Usage:   gos   
-Version: v0.2.4
+Version: v0.2.5
 
 License: MIT
 
@@ -28,11 +29,12 @@ Options:
 
 Commands:
 
-  repl                - Gos REPL (Legacy)
-  gvm         <file>  - Run a Gos source file by bytecode
-  run         <file>  - Run a Gos source file by ast-walking (Legacy)   
+  repl                - Gos REPL                                        
+  gvm         <file>  - Run a Gos source file by bytecode (Experimental)
+  run         <file>  - Run a Gos source file by ast-walking            
   ast         <file>  - Show the AST of a Gos source file               
-  preprocess  <file>  - Show the proprecessed Gos source file
+  preprocess  <file>  - Show the proprecessed Gos source file           
+  dis         <file>  - Show the bytecode of a Gos source file
 ```
 
 - ### _**In TypeScript**_
