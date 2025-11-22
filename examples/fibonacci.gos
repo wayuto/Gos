@@ -7,7 +7,7 @@ fun f(x) {
             let tmp = a + b
             a = b
             b = tmp
-            x--
+            x-- 
         }
         return b
     }
