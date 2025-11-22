@@ -28,9 +28,9 @@ Options:
 
 Commands:
 
-  repl                - Gos REPL                                        
+  repl                - Gos REPL (Legacy)
   gvm         <file>  - Run a Gos source file by bytecode
-  run         <file>  - Run a Gos source file by ast-walking            
+  run         <file>  - Run a Gos source file by ast-walking (Legacy)   
   ast         <file>  - Show the AST of a Gos source file               
   preprocess  <file>  - Show the proprecessed Gos source file
 ```
