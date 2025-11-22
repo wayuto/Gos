@@ -1,3 +1,7 @@
-in n
-writeFile('testFile' n)
-out readFile('testFile')
+$import "examples/std.gos"
+
+let name = input("Enter your name: ")
+writeFile("hello.txt" "Hello " + name + "!")
+print("Saved to hello.txt")
+
+print(readFile("hello.txt"))

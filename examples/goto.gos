@@ -1,8 +1,5 @@
 let n = 10
 
-goto label
-del n # this expression will be skipped
-
 label:
 out n
 out ' '

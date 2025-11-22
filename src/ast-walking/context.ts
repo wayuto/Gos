@@ -65,13 +65,6 @@ export class Context {
     );
   };
 
-  public delVar = (name: string): void => {
-    const top = this.vars[this.vars.length - 1];
-    if (!top.delete(name)) {
-      return err("Context", `No variable '${name}' in current scope`);
-    }
-  };
-
   public setLabel = (name: string, idx: number): void => {
     this.labels.set(name, idx);
   };

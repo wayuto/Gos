@@ -27,7 +27,6 @@ export const enum TokenType {
   RBRACE,
   COLON,
   VAR_DECL,
-  VAR_DEL,
   VAR,
   IN,
   OUT,
@@ -41,6 +40,7 @@ export const enum TokenType {
   CALL,
   RETURN,
   IDENT,
+  EVAL,
   EOF,
 }
 

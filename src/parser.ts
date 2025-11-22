@@ -103,12 +103,6 @@ export class Parser {
         this.lexer.nextToken();
         return { type: "Goto", name };
       }
-      case TokenType.VAR_DEL: {
-        this.lexer.nextToken();
-        const name = this.lexer.currentToken().name as string;
-        this.lexer.nextToken();
-        return { type: "Del", name };
-      }
       case TokenType.VAR_DECL: {
         this.lexer.nextToken();
         const name = this.lexer.currentToken().name as string;
@@ -146,6 +140,14 @@ export class Parser {
         return {
           type: "Return",
           value,
+        };
+      }
+      case TokenType.EVAL: {
+        this.lexer.nextToken();
+        const value = this.expr();
+        return {
+          type: "Eval",
+          code: value,
         };
       }
       case TokenType.IF:

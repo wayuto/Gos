@@ -3,7 +3,8 @@ export const isdigit = (ch: string): boolean =>
 
 export const isalpha = (ch: string): boolean =>
   ch.length === 1 &&
-  ((ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") || ch === "_");
+  ((ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") || ch === "_" ||
+    ch === "\\");
 
 export const err = (from: string, msg: string): never => {
   throw `${from}: ${msg}`;

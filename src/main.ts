@@ -9,20 +9,16 @@ import {
   Parser,
   Preprocessor,
 } from "@wayuto/gos";
-
-const interpret = async (file: string): Promise<void> => {
-  const src = await Deno.readTextFile(file);
-  const preprocessor = new Preprocessor(src);
-  const code = await preprocessor.preprocess();
-  const lexer = new Lexer(code);
-  const parser = new Parser(lexer);
-  const ast = parser.parse();
-  const context = new Context();
-  const interpreter = new Interpreter(context);
-  interpreter.execute(ast);
-};
+import { compile, load } from "./bytecode/serialize.ts";
 
 const run = async (file: string): Promise<void> => {
+  if (file.endsWith("gbc")) {
+    const { chunk, maxSlot } = await load(file);
+
+    const gvm = new GVM(chunk, maxSlot);
+    gvm.run();
+    return;
+  }
   const src = await Deno.readTextFile(file);
   const preprocessor = new Preprocessor(src);
   const code = await preprocessor.preprocess();
@@ -87,21 +83,24 @@ const main = async (): Promise<void> => {
   else {
     await new Command()
       .name("gos")
-      .version("v0.2.5")
+      .version("v0.2.6")
       .description("Gos Interpreter")
       .meta("License", "MIT")
       .command("repl", "Gos REPL")
       .action(async () => await repl())
       .command(
-        "gvm <file:string>",
-        "Run a Gos source file by bytecode (Experimental)",
+        "run <file:string>",
+        "Run a Gos source file by bytecode",
       )
       .action(async (_, file: string) => {
         await run(file);
       })
-      .command("run <file:string>", "Run a Gos source file by ast-walking")
+      .command(
+        "compile <file:string>",
+        "Compile a Gos source file",
+      )
       .action(async (_, file: string) => {
-        await interpret(file);
+        await compile(file);
       })
       .command("ast <file:string>", "Show the AST of a Gos source file")
       .action(async (_, file: string) => {
@@ -115,7 +114,7 @@ const main = async (): Promise<void> => {
       })
       .command("dis <file:string>", "Show the bytecode of a Gos source file")
       .action(async (_, file: string) => {
-        printBytecode(file);
+        await printBytecode(file);
       })
       .parse(Deno.args);
   }

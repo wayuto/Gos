@@ -1,6 +1,6 @@
 {
   "name": "@wayuto/gos",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "The Gos Programming Language",
   "exports": {
     ".": "./src/mod.ts",

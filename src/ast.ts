@@ -14,13 +14,13 @@ export type NodeType =
   | "Goto"
   | "If"
   | "While"
-  | "Del"
   | "Stmt"
   | "ExprStmt"
   | "FuncDecl"
   | "FuncCall"
   | "NativeFunc"
   | "Return"
+  | "Eval"
   | "Exit";
 
 export interface Node {
@@ -44,11 +44,11 @@ export type Expression =
   | While
   | Label
   | Goto
-  | Del
   | Stmt
   | FuncDecl
   | FuncCall
   | Return
+  | Eval
   | Exit;
 
 export interface Val extends Node {
@@ -119,11 +119,6 @@ export interface Goto extends Node {
   name: string;
 }
 
-export interface Del extends Node {
-  type: "Del";
-  name: string;
-}
-
 export interface Exit extends Node {
   type: "Exit";
   status: Expression;
@@ -155,4 +150,9 @@ export interface NativeFunc extends Node {
 export interface Return extends Node {
   type: "Return";
   value: Expression;
+}
+
+export interface Eval extends Node {
+  type: "Eval";
+  code: Expression;
 }

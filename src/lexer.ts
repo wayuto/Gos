@@ -124,10 +124,6 @@ export class Lexer {
           this.tok = { type: TokenType.GOTO };
           break;
         }
-        case "del": {
-          this.tok = { type: TokenType.VAR_DEL };
-          break;
-        }
         case "exit": {
           this.tok = { type: TokenType.EXIT };
           break;
@@ -138,6 +134,10 @@ export class Lexer {
         }
         case "return": {
           this.tok = { type: TokenType.RETURN };
+          break;
+        }
+        case "eval": {
+          this.tok = { type: TokenType.EVAL };
           break;
         }
         default: {
@@ -152,6 +152,34 @@ export class Lexer {
         if (this.current() === "\0") {
           return err("Lexer", "Expected: '\"'");
         }
+        if (this.current() === "\\") {
+          this.bump();
+          switch (this.current()) {
+            case "n": {
+              s += "\n";
+              this.bump();
+              continue;
+            }
+            case "t": {
+              s += "\t";
+              this.bump();
+              continue;
+            }
+            case "d": {
+              s += "\d";
+              this.bump();
+              continue;
+            }
+            case "\\": {
+              s += "\\";
+              this.bump();
+              continue;
+            }
+            default: {
+              continue;
+            }
+          }
+        }
         s += this.current();
         this.bump();
       }
@@ -163,6 +191,34 @@ export class Lexer {
       while (this.current() !== "'") {
         if (this.current() === "\0") {
           return err("Lexer", 'Expected: "\'"');
+        }
+        if (this.current() === "\\") {
+          this.bump();
+          switch (this.current()) {
+            case "n": {
+              s += "\n";
+              this.bump();
+              continue;
+            }
+            case "t": {
+              s += "\t";
+              this.bump();
+              continue;
+            }
+            case "d": {
+              s += "\d";
+              this.bump();
+              continue;
+            }
+            case "\\": {
+              s += "\\";
+              this.bump();
+              continue;
+            }
+            default: {
+              continue;
+            }
+          }
         }
         s += this.current();
         this.bump();

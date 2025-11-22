@@ -23,12 +23,14 @@ export const enum Op {
   LT,
   LE,
   OUT,
+  IN,
   POP,
   JUMP,
   JUMP_IF_FALSE,
   CALL,
   RET,
   EXIT,
+  EVAL,
   HALT,
 }
 
@@ -56,12 +58,14 @@ export const dis = (chunk: Chunk): void => {
     "LT",
     "LE",
     "OUT",
+    "IN",
     "POP",
     "JUMP",
     "JUMP_IF_FALSE",
     "CALL",
     "RET",
     "EXIT",
+    "EVAL",
     "HALT",
   ];
 

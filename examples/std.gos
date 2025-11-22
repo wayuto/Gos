@@ -1,0 +1,36 @@
+fun print(msg) {
+    out msg
+    out '\n'
+}
+
+fun input(msg) {
+    out msg
+    in buf
+    return buf
+}
+
+fun readFile(file) return eval "Deno.readTextFileSync('" + file + "')"
+
+fun writeFile(file content) eval "Deno.writeTextFileSync('"
+    + file
+    + "', '"
+    + content
+    + "')"
+
+fun now() return eval "Date.now()"
+
+fun sqrt(n) return eval "Math.sqrt(" + n + ")"
+
+fun abs(n) return eval "Math.abs(" + n + ")"
+
+fun max(a b) return eval "Math.max(" 
+    + a
+    + ", "
+    + b 
+    +")"
+
+fun min(a b) return eval "Math.min(" 
+    + a
+    + ", "
+    + b 
+    +")"

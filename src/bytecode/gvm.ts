@@ -22,16 +22,16 @@ export class GVM {
     };
     jmpTable[Op.LOAD_VAR] = () => {
       const slot = this.chunk.code[this.ip++];
-      this.stack.push(this.slots[slot]);
+      this.stack.push(this.slots[this.currBaseSlot + slot]);
     };
     jmpTable[Op.STORE_VAR] = () => {
       const slot = this.chunk.code[this.ip++];
-      this.slots[slot] = this.stack.pop();
+      this.slots[this.currBaseSlot + slot] = this.stack.pop();
     };
     jmpTable[Op.ADD] = () => {
       const right = this.stack.pop();
       const left = this.stack.pop();
-      const val = (left as number) + (right as number);
+      const val = (left as any) + (right as any);
       this.stack.push(val);
     };
     jmpTable[Op.SUB] = () => {
@@ -90,7 +90,17 @@ export class GVM {
     };
     jmpTable[Op.OUT] = () => {
       const value = this.stack.pop();
-      console.log(value);
+      Deno.stdout.writeSync(new TextEncoder().encode(`${value}`));
+    };
+    jmpTable[Op.IN] = () => {
+      const slot = this.chunk.code[this.ip++];
+      const buf = new Uint8Array(1024);
+      const n = Deno.stdin.readSync(buf);
+      let input = "";
+      if (n !== null) {
+        input = new TextDecoder().decode(buf.subarray(0, n)).trim();
+      }
+      this.slots[this.currBaseSlot + slot] = input;
     };
     jmpTable[Op.POP] = () => {
       this.stack.pop();
@@ -151,7 +161,7 @@ export class GVM {
 
       this.callStack.push({
         returnIp: this.ip,
-        baseSlot: this.currBaseSlot | 0,
+        baseSlot: this.currBaseSlot,
       });
 
       const newBaseSlot = this.slots.length;
@@ -160,14 +170,16 @@ export class GVM {
       for (let i = 0; i < argsCount; i++) {
         args.push(this.stack.pop());
       }
-      args.reverse();
-      this.slots.push(...args);
+      for (let i = argsCount - 1; i >= 0; i--) {
+        this.slots.push(args[i]);
+      }
 
       this.currBaseSlot = newBaseSlot;
       this.ip = target;
     };
     jmpTable[Op.RET] = () => {
       const value = this.stack.pop();
+
       if (this.callStack.length === 0) return;
       const frame = this.callStack.pop();
 
@@ -183,6 +195,12 @@ export class GVM {
       const status = this.stack.pop() as number;
       return Deno.exit(status);
     };
+    jmpTable[Op.EVAL] = () => {
+      const code = this.stack.pop() as string;
+      const val = globalThis.eval(code);
+      this.stack.push(val);
+    };
+
     while (true) {
       const op = this.chunk.code[this.ip++];
       if (op === Op.HALT) return;

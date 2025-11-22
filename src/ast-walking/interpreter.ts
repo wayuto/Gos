@@ -148,10 +148,6 @@ export class Interpreter {
       case "Label": {
         return;
       }
-      case "Del": {
-        this.context.delVar(expr.name);
-        return;
-      }
       case "Stmt": {
         let result: Literal = undefined;
         this.context.enterScope();

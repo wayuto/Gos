@@ -1,3 +1,4 @@
+import { number } from "jsr:@cliffy/flags@1.0.0-rc.5";
 import type { Expression, Program } from "../ast.ts";
 import { type Literal, TokenType } from "../token.ts";
 import { err } from "../utils.ts";
@@ -20,6 +21,7 @@ export class Compiler {
   private funcs: Map<string, { addr: number; paramCount: number }>[] = [
     new Map(),
   ];
+  private labels: Map<string, { high: number; low: number }> = new Map();
 
   emit = (op: Op, ...arg: number[]): void => {
     this.codes.push(op);
@@ -215,6 +217,11 @@ export class Compiler {
         this.emit(Op.OUT);
         break;
       }
+      case "In": {
+        const slot = this.declVar(expr.name);
+        this.emit(Op.IN, slot);
+        break;
+      }
       case "Stmt": {
         this.enterScope();
         const body = expr.body;
@@ -311,7 +318,6 @@ export class Compiler {
 
         this.exitScope();
         this.patchJumpAddr(jumpAddr + 1, this.codes.length);
-        this.emit(Op.POP);
         break;
       }
       case "FuncCall": {
@@ -360,13 +366,32 @@ export class Compiler {
         this.emit(Op.RET);
         break;
       }
-      case "Label":
+      case "Eval": {
+        this.compileExpr(expr.code);
+        this.emit(Op.EVAL);
+        break;
+      }
+      case "Label": {
+        const addr = this.codes.length;
+        this.labels.set(expr.name, {
+          high: (addr >> 8) & 0xff,
+          low: addr & 0xff,
+        });
+        break;
+      }
       case "Goto": {
-        console.warn("'goto' isn't available in bytecode mode");
+        const label = this.labels.get(expr.name);
+        if (label === undefined) {
+          return err("Compiler", `Label ${expr.name} not found`);
+        }
+        this.emit(Op.JUMP, label.high, label.low);
         break;
       }
       default: {
-        return err("Compiler", `Unknown node type: ${expr.type}`);
+        return err(
+          "Compiler",
+          `Unknown node type: ${(expr as Expression).type}`,
+        );
       }
     }
   };

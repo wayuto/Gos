@@ -14,7 +14,7 @@ feature support)_
 ➜  gos -h
 
 Usage:   gos   
-Version: v0.2.5
+Version: v0.2.6
 
 License: MIT
 
@@ -29,11 +29,11 @@ Options:
 
 Commands:
 
-  repl                - Gos REPL                                        
-  gvm         <file>  - Run a Gos source file by bytecode (Experimental)
-  run         <file>  - Run a Gos source file by ast-walking            
-  ast         <file>  - Show the AST of a Gos source file               
-  preprocess  <file>  - Show the proprecessed Gos source file           
+  repl                - Gos REPL                              
+  run         <file>  - Run a Gos source file by bytecode     
+  compile     <file>  - Compile a Gos source file             
+  ast         <file>  - Show the AST of a Gos source file     
+  preprocess  <file>  - Show the proprecessed Gos source file 
   dis         <file>  - Show the bytecode of a Gos source file
 ```
 
@@ -88,94 +88,89 @@ gvm.run();
 
 - ### _**Basic Calculate**_
 
-```typescript
-(1 + 2) * 3 # Output: 9
+```gos
+(1 + 2) * 3
 ```
 
 - ### _**Variables**_
 
-```typescript
+```gos
 let x = 1
 let y = 2
-x + y # Output: 3
+x + y
 ```
 
 - ### _**Basic I/O**_
 
-```typescript
+```gos
 # Console I/O
-out 1 # Output: 1
-in n # n = something you entered
+$import "examples/std.gos"
+
+let name = input("Enter your name: ")
+print("Hello " + name + "!")
 ```
 
-```typescript
+```gos
 # File I/O
+$import "examples/std.gos"
+
 writeFile('testFile', '1')
-let content = readFile('testFile')
-out content # Output: 1
+let raw = readFile('testFile')
 ```
 
 - ### _**Flow Control**_
 
-```typescript
+```gos
 let x = 1
 let y = 2
-if (x < y) out y else out x # Output: 2
+if (x < y) out y else out x
 
 while (true) {
     out 1
-} # Output: 1 1 1 1 ...
+}
 ```
 
 - ### _**Functions**_
 
-```typescript
+```gos
 fun sum(x y) { return x + y }
-sum(1 2) # Output: 3
+sum(1 2)
 ```
 
 - ### _**Goto**_
 
-```typescript
+```gos
 let n = 10
-
-N = false # no newline when print values
-goto label
-del n # this expression will be skipped
 
 label:
 out n
 out ' '
 n--
-if n != 0 goto label # Output: 10 9 8 7 6 5 4 3 2 1
+if n != 0 goto label
 ```
 
 - ### _**Block Scope**_
 
-```typescript
+```gos
 fun f() out "outer"
 {
   fun f() out "inner"
   f()
 }
 f()
-# Output:
-# inner
-# outer
 
-# Block scope as a expression
 let x = {
     let a = 1
     let b = 2
     a + b
-} # x = 3
+}
 
-let y = if (true) 1 else 0 # y = 1
+let y = if (true) 1 else 0
 ```
 
 - ### _**Import module**_
 
-```typescript
+```gos
 $import "fibonacci.gos"
 
 let n = 10
