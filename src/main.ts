@@ -11,7 +11,7 @@ import {
 } from "@wayuto/gos";
 import { compile, load } from "./bytecode/serialize.ts";
 
-const interpret = async (file: string) => {
+const interpret = async (file: string): Promise<void> => {
   const src = await Deno.readTextFile(file);
   const preprocessor = new Preprocessor(src);
   const code = await preprocessor.preprocess();
@@ -113,7 +113,8 @@ const main = async (): Promise<void> => {
       )
       .action(async (_, file: string) => {
         await compile(file);
-      }).command(
+      })
+      .command(
         "interpret <file:string>",
         "Run a Gos source file by ast-walker",
       )
