@@ -1,6 +1,6 @@
 # _The Gos Programming Language_
 
-### _A simple interpreter implementing in `TypeScript`_
+### _A simple interpreter implemented in `TypeScript`_
 
 _Now the interpretersupports both `Tree-walking` and `GVM`(Experimental, limited
 feature support)_
