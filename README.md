@@ -32,6 +32,7 @@ Commands:
   repl                - Gos REPL                              
   run         <file>  - Run a Gos source file by bytecode     
   compile     <file>  - Compile a Gos source file             
+  interpret   <file>  - Run a Gos source file by ast-walker   
   ast         <file>  - Show the AST of a Gos source file     
   preprocess  <file>  - Show the proprecessed Gos source file 
   dis         <file>  - Show the bytecode of a Gos source file

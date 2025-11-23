@@ -1,0 +1,4 @@
+$import "fibonacci.gos"
+
+let n = 35
+let result = f(n)

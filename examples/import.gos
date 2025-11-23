@@ -1,6 +1,0 @@
-$import "fibonacci.gos"
-$import "std.gos"
-
-let n = 100
-let result = f(n)
-print(result)

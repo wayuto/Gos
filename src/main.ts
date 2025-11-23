@@ -10,6 +10,7 @@ import {
   Preprocessor,
 } from "@wayuto/gos";
 import { compile, load } from "./bytecode/serialize.ts";
+import { Optimizer } from "./opimizer.ts";
 
 const interpret = async (file: string): Promise<void> => {
   const src = await Deno.readTextFile(file);
@@ -36,7 +37,8 @@ const run = async (file: string): Promise<void> => {
   const code = await preprocessor.preprocess();
   const lexer = new Lexer(code);
   const parser = new Parser(lexer);
-  const ast = parser.parse();
+  const optimizer = new Optimizer();
+  const ast = optimizer.optimize(parser.parse());
   const compiler = new Compiler();
   const { chunk, maxSlot } = compiler.compile(ast);
   const gvm = new GVM(chunk, maxSlot);
@@ -45,9 +47,12 @@ const run = async (file: string): Promise<void> => {
 
 const printAST = async (file: string): Promise<void> => {
   const src = await Deno.readTextFile(file);
-  const lexer = new Lexer(src);
+  const preprocessor = new Preprocessor(src);
+  const code = await preprocessor.preprocess();
+  const lexer = new Lexer(code);
   const parser = new Parser(lexer);
-  const ast = parser.parse();
+  const optimizer = new Optimizer();
+  const ast = optimizer.optimize(parser.parse());
   console.log(ast);
 };
 
@@ -64,7 +69,8 @@ const printBytecode = async (file: string): Promise<void> => {
   const code = await preprocessor.preprocess();
   const lexer = new Lexer(code);
   const parser = new Parser(lexer);
-  const ast = parser.parse();
+  const optimizer = new Optimizer();
+  const ast = optimizer.optimize(parser.parse());
   const compiler = new Compiler();
   const { chunk } = compiler.compile(ast);
   dis(chunk);

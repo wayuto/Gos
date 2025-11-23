@@ -1,4 +1,3 @@
-import { number } from "jsr:@cliffy/flags@1.0.0-rc.5";
 import type { Expression, Program } from "../ast.ts";
 import { type Literal, TokenType } from "../token.ts";
 import { err } from "../utils.ts";

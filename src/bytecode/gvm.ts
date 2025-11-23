@@ -31,13 +31,15 @@ export class GVM {
     jmpTable[Op.ADD] = () => {
       const right = this.stack.pop();
       const left = this.stack.pop();
+      // deno-lint-ignore no-explicit-any
       const val = (left as any) + (right as any);
       this.stack.push(val);
     };
     jmpTable[Op.SUB] = () => {
       const right = this.stack.pop();
       const left = this.stack.pop();
-      const val = (left as number) - (right as number);
+      // deno-lint-ignore no-explicit-any
+      const val = (left as any) - (right as any);
       this.stack.push(val);
     };
     jmpTable[Op.MUL] = () => {

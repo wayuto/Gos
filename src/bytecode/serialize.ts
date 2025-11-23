@@ -1,6 +1,6 @@
-import { Compiler, GVM, Lexer, Parser, Preprocessor } from "@wayuto/gos";
+import { Compiler, Lexer, Parser, Preprocessor } from "@wayuto/gos";
 import type { Chunk } from "./compiler.ts";
-import { Literal } from "../token.ts";
+import type { Literal } from "../token.ts";
 
 export const compile = async (
   sourceFile: string,
