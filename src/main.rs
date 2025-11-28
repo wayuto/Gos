@@ -1,4 +1,4 @@
-use crate::{lexer::Lexer, token::TokenType};
+use crate::{lexer::Lexer, parser::Parser};
 
 pub mod ast;
 pub mod error;
@@ -7,14 +7,16 @@ pub mod parser;
 pub mod token;
 
 fn main() {
-    let src = "let x = 1";
-    let mut lexer = Lexer::new(src);
-    loop {
-        lexer.next_token();
-        let tok = lexer.current_token();
-        if tok.token == TokenType::EOF {
-            break;
+    let src = "
+    fun f(x) {
+        if x <= 1 return x
+        else {
+            return f(x - 1) + f(x - 2)
         }
-        println!("{:?}", tok);
     }
+    let x = (1 + 2) * 3
+    ";
+    let lexer = Lexer::new(src);
+    let mut parser = Parser::new(lexer);
+    println!("{:?}", parser.parse());
 }
