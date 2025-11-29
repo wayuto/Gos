@@ -189,14 +189,45 @@ impl<'a> Lexer<'a> {
         } else if self.current() == '"' {
             self.bump();
             let mut s = String::new();
-            while self.current() != '"' {
-                if self.current() == '\0' {
-                    panic!("Lexer: Expected: '\"'")
+            loop {
+                match self.current() {
+                    '"' => {
+                        self.bump();
+                        break;
+                    }
+                    '\0' => panic!("Lexer: unterminated string"),
+                    '\\' => {
+                        self.bump();
+                        match self.current() {
+                            'n' => {
+                                s.push('\n');
+                                self.bump();
+                            }
+                            't' => {
+                                s.push('\t');
+                                self.bump();
+                            }
+                            'r' => {
+                                s.push('\r');
+                                self.bump();
+                            }
+                            '\\' => {
+                                s.push('\\');
+                                self.bump();
+                            }
+                            '"' => {
+                                s.push('"');
+                                self.bump();
+                            }
+                            c => panic!("Lexer: invalid escape \\{}", c),
+                        }
+                    }
+                    c => {
+                        s.push(c);
+                        self.bump();
+                    }
                 }
-                s.push(self.current());
-                self.bump();
             }
-            self.bump();
             self.tok = Token {
                 token: TokenType::LITERAL,
                 value: Some(Literal::Str(s)),

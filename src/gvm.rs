@@ -196,16 +196,16 @@ impl Gvm {
                 }
                 Op::OUT => match self.stack.pop().unwrap() {
                     Literal::Bool(b) => {
-                        println!("{}", b);
+                        print!("{}", b);
                     }
                     Literal::Number(n) => {
-                        println!("{}", n);
+                        print!("{}", n);
                     }
                     Literal::Str(s) => {
-                        println!("{}", s);
+                        print!("{}", s);
                     }
                     Literal::Void => {
-                        println!("void");
+                        print!("void");
                     }
                 },
                 Op::IN => {

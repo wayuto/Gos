@@ -1,19 +1,21 @@
 use core::panic;
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     ast::{Expr, Program},
     bytecode::Op,
     token::{Literal, TokenType},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bytecode {
     pub chunk: Chunk,
     pub max_slot: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: Vec<Literal>,

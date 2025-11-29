@@ -3,13 +3,15 @@ use std::{fs, iter::Peekable, str::Chars};
 pub struct Preprocessor<'a> {
     pos: usize,
     src: Peekable<Chars<'a>>,
+    path: String,
 }
 
 impl<'a> Preprocessor<'a> {
-    pub fn new(src: &'a str) -> Self {
+    pub fn new(src: &'a str, path: String) -> Self {
         Self {
             pos: 0,
             src: src.chars().peekable(),
+            path,
         }
     }
 
@@ -89,10 +91,13 @@ impl<'a> Preprocessor<'a> {
                 match cmd.as_str() {
                     "import" => {
                         let file = self.parser_file_path();
-
                         if let Some(file) = file {
-                            let raw = fs::read_to_string(file).unwrap();
-                            let mut pp = Preprocessor::new(raw.as_str());
+                            if self.path.is_empty() {
+                                self.path = '.'.to_string();
+                            }
+                            let raw =
+                                fs::read_to_string(format!("{}/{}", self.path, file)).unwrap();
+                            let mut pp = Preprocessor::new(raw.as_str(), self.path.clone());
                             let conent = pp.preprocess();
                             output.push_str(&conent);
                         } else {

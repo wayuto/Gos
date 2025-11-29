@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum TokenType {
     ADD,
@@ -44,7 +46,7 @@ pub enum TokenType {
     EOF,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Literal {
     Number(f64),
     Bool(bool),
