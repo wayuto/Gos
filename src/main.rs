@@ -6,7 +6,7 @@ use crate::{
     serialize::{compile, load},
 };
 use clap::{Arg, Command};
-use std::{env, fs, path::Path};
+use std::{fs, path::Path};
 
 pub mod ast;
 pub mod bytecode;
