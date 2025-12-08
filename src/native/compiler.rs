@@ -93,7 +93,6 @@ impl Compiler {
         assemble!(self.text, "section .text");
         assemble!(self.text, "extern itoa");
         assemble!(self.text, "extern atoi");
-        assemble!(self.text, "extern puts");
         assemble!(self.text, "global _start");
 
         for expr in program.body.iter() {
@@ -151,7 +150,9 @@ impl Compiler {
             i += 1;
         }
 
-        result.join("\n")
+        let opt = result.join("\n");
+
+        if opt == src { opt } else { self.optim(opt) }
     }
     fn compile_expr(&mut self, expr: Expr) -> () {
         match expr {
