@@ -24,8 +24,6 @@ pub enum Expr {
     FuncDecl(FuncDecl),
     FuncCall(FuncCall),
     Return(Return),
-    Out(Out),
-    In(In),
     Label(Label),
     Goto(Goto),
     Extern(Extern),
@@ -97,16 +95,6 @@ pub struct FuncCall {
 #[derive(Debug, Clone)]
 pub struct Return {
     pub value: Option<Box<Expr>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Out {
-    pub value: Box<Expr>,
-}
-
-#[derive(Debug, Clone)]
-pub struct In {
-    pub name: String,
 }
 
 #[derive(Debug, Clone)]

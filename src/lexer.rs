@@ -139,18 +139,6 @@ impl<'a> Lexer<'a> {
                         value: None,
                     }
                 }
-                "out" => {
-                    self.tok = Token {
-                        token: TokenType::OUT,
-                        value: None,
-                    }
-                }
-                "in" => {
-                    self.tok = Token {
-                        token: TokenType::IN,
-                        value: None,
-                    }
-                }
                 "if" => {
                     self.tok = Token {
                         token: TokenType::IF,

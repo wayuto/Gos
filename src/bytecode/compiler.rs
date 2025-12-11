@@ -219,14 +219,6 @@ impl Compiler {
                     }
                 }
             }
-            Expr::Out(out) => {
-                self.compile_expr(*out.value);
-                self.emit(Op::OUT, &[]);
-            }
-            Expr::In(i) => {
-                let slot = self.decl_var(i.name);
-                self.emit(Op::IN, &[slot]);
-            }
             Expr::Stmt(stmt) => {
                 self.enter_scope();
                 let body = stmt.body;

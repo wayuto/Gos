@@ -147,10 +147,10 @@ x + y
 ```gos
 let x = 1
 let y = 2
-if (x < y) out y else out x
+if (x < y) println(itoa(y)) else println(itoa(x))
 
 while true {
-    puts("I love you!")
+    println("I love you!")
 }
 ```
 
@@ -164,13 +164,8 @@ sum(1 2)
 - ### _**Goto**_
 
 ```gos
-let n = 10
-
 label:
-out n
-out ' '
-n--
-if n != 0 goto label
+goto label
 ```
 
 - ### _**Block Scope**_
@@ -182,7 +177,7 @@ let x = {
     a + b
 }
 
-let y = if (true) 1 else 0
+let y = if true 1 else 0
 ```
 
 - ### _**Importing module**_
@@ -191,12 +186,12 @@ let y = if (true) 1 else 0
 $import "fibonacci.gos"
 
 let n = 10
-let result = f(n)
-out result
+let result = itoa(f(n))
+println(result)
 
 # Only for Gos/Native
-extern puts
-puts("Hello world!")
+extern println
+println("Hello world!")
 ```
 
 - ### _**Interaction with C**_

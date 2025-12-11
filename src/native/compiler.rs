@@ -310,26 +310,6 @@ impl Compiler {
                 assemble!(self.text, "pop rax");
                 assemble!(self.text, "mov [rbp - {}], rax", offset);
             }
-            Expr::Out(out) => {
-                let id = self.text.len();
-                self.compile_expr(*out.value);
-                assemble!(self.text, "pop rax");
-
-                assemble!(self.text, "mov rsi, rax");
-                assemble!(self.text, "mov rdi, rax");
-                assemble!(self.text, "xor rcx, rcx");
-                assemble!(self.text, ".len_loop{:x}:", id);
-                assemble!(self.text, "cmp byte [rdi + rcx], 0");
-                assemble!(self.text, "je .len_end{:x}", id);
-                assemble!(self.text, "inc rcx");
-                assemble!(self.text, "jmp .len_loop{:x}", id);
-                assemble!(self.text, ".len_end{:x}:", id);
-
-                assemble!(self.text, "mov rax, 1");
-                assemble!(self.text, "mov rdi, 1");
-                assemble!(self.text, "mov rdx, rcx");
-                assemble!(self.text, "syscall");
-            }
             Expr::Stmt(stmt) => {
                 self.enter_scope(false);
                 for expr in stmt.body {
@@ -501,7 +481,6 @@ impl Compiler {
             Expr::Extern(ext) => {
                 assemble!(self.text, "extern {}", ext.func);
             }
-            _ => {}
         }
     }
 }
