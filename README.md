@@ -110,10 +110,11 @@ let ld_status = std::process::Command::new("ld")
 ## _My First Gos/Native Program:_
 
 ```gos
-extern puts
+$import "stdlib"
 
 pub fun main() {
-    puts("Hello world!")
+    println("Hello world!")
+    return 0
 }
 ```
 
@@ -127,11 +128,11 @@ Hello world!
 
 ## _Supported Features:_
 
-- ### _**Basic Calculate**_
-
-```gos
-(1 + 2) * 3
-```
+- ### _**Gos Standard Library**_
+- stdlib
+- gosio
+- string
+- convert
 
 - ### _**Variables**_
 
