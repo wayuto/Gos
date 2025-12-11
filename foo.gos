@@ -1,6 +1,6 @@
-extern puts
+$import "stdlib"
 
 pub fun main() {
-    puts("Hello world!")
+    println("Hello world!")
     return 0
 } 

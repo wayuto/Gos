@@ -1,0 +1,5 @@
+extern strlen
+extern memcmp
+extern memcpy
+extern memset
+extern bcmp

@@ -95,11 +95,40 @@ impl<'a> Preprocessor<'a> {
                             if self.path.is_empty() {
                                 self.path = '.'.to_string();
                             }
-                            let raw =
-                                fs::read_to_string(format!("{}/{}", self.path, file)).unwrap();
-                            let mut pp = Preprocessor::new(raw.as_str(), self.path.clone());
-                            let conent = pp.preprocess();
-                            output.push_str(&conent);
+                            let src = if file.ends_with(".gos") {
+                                format!("{}/{}", self.path, file)
+                            } else {
+                                format!("{}/{}.gos", self.path, file)
+                            };
+                            match fs::read_to_string(src) {
+                                Ok(raw) => {
+                                    let mut pp = Preprocessor::new(raw.as_str(), self.path.clone());
+                                    let conent = pp.preprocess();
+                                    output.push_str(&conent);
+                                }
+                                Err(_) => {
+                                    self.path = "/usr/local/gos".to_string();
+                                    let src = if file.ends_with(".gos") {
+                                        format!("{}/{}", self.path, file)
+                                    } else {
+                                        format!("{}/{}.gos", self.path, file)
+                                    };
+                                    match fs::read_to_string(src) {
+                                        Ok(raw) => {
+                                            let mut pp =
+                                                Preprocessor::new(raw.as_str(), self.path.clone());
+                                            let conent = pp.preprocess();
+                                            output.push_str(&conent);
+                                        }
+                                        Err(_) => {
+                                            panic!(
+                                                "Preprocessor: failed to import file '{}'",
+                                                file
+                                            );
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             self.pos = start_pos;
                             output.push(self.current());

@@ -1,0 +1,12 @@
+[package]
+name = "gos-std"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "gos_std"
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[profile.release]
+panic = "abort"
