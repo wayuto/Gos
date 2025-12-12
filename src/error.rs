@@ -1,12 +1,12 @@
-use std::process::exit;
-
 use crate::token::Literal;
+use std::process::exit;
 
 enum ErrorType {
     Unknown,
     SyntaxError(String),
     UnimplementedError(String),
     NameError(String),
+    ImportError(String),
 }
 
 pub struct GosError {
@@ -36,6 +36,10 @@ impl GosError {
         }
     }
 
+    pub fn import_error(&mut self, file: String) -> () {
+        self.err_type = ErrorType::ImportError(format!("cannot import {:?}", file));
+    }
+
     pub fn unimplemented(&mut self, unimplemented: &str) -> () {
         self.err_type =
             ErrorType::UnimplementedError(format!("{} hasn't been implemented", unimplemented));
@@ -56,6 +60,12 @@ impl GosError {
             ErrorType::UnimplementedError(e) => {
                 eprintln!(
                     "UnimplementedError: {} (line: {}, column: {})",
+                    e, self.row, self.col
+                );
+            }
+            ErrorType::ImportError(e) => {
+                eprintln!(
+                    "ImportError: {} (line: {}, column: {})",
                     e, self.row, self.col
                 );
             }

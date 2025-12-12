@@ -1,9 +1,13 @@
 use std::{fs, iter::Peekable, str::Chars};
 
+use crate::error::GosError;
+
 pub struct Preprocessor<'a> {
     pos: usize,
     src: Peekable<Chars<'a>>,
     path: String,
+    row: usize,
+    col: usize,
 }
 
 impl<'a> Preprocessor<'a> {
@@ -12,6 +16,8 @@ impl<'a> Preprocessor<'a> {
             pos: 0,
             src: src.chars().peekable(),
             path,
+            row: 1,
+            col: 0,
         }
     }
 
@@ -21,10 +27,15 @@ impl<'a> Preprocessor<'a> {
 
     fn bump(&mut self) -> () {
         self.src.next();
+        self.col += 1;
     }
 
     fn skip_spaces(&mut self) -> () {
         while self.current() == ' ' || self.current() == '\t' || self.current() == '\n' {
+            if self.current() == '\n' {
+                self.row += 1;
+                self.col = 0;
+            }
             self.bump();
         }
     }
@@ -121,10 +132,9 @@ impl<'a> Preprocessor<'a> {
                                             output.push_str(&conent);
                                         }
                                         Err(_) => {
-                                            panic!(
-                                                "Preprocessor: failed to import file '{}'",
-                                                file
-                                            );
+                                            let mut err = GosError::new(self.row, self.col);
+                                            err.import_error(file);
+                                            err.panic();
                                         }
                                     }
                                 }
