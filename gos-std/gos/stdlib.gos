@@ -1,5 +1,6 @@
 $import "gosio.gos"
 $import "string.gos"
 $import "convert.gos"
+$import "math.gos"
 extern syscall
 extern exit

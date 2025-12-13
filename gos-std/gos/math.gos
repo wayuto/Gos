@@ -1,0 +1,6 @@
+extern abs
+extern sqrt
+extern max
+extern min
+extern pow
+extern fact

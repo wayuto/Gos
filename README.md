@@ -126,10 +126,11 @@ Hello world!
 ## _Supported Features:_
 
 - ### _**Gos Standard Library**_
-- stdlib
-- gosio
-- string
-- convert
+- stdlib (_start, syscall, exit, ...)
+- gosio (write, read, print, mprint, input)
+- string (strlen)
+- convert (itoa, atoi)
+- math (abs, sqrt, max, min, pow, fact)
 
 - ### _**Variables**_
 

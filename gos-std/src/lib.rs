@@ -7,6 +7,7 @@ use core::panic::PanicInfo;
 
 pub mod convert;
 pub mod gosio;
+pub mod math;
 pub mod string;
 
 #[unsafe(no_mangle)]
