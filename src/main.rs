@@ -154,7 +154,7 @@ fn compile_native(file: &String, typ: &str, no_std: bool) -> () {
 
 fn main() {
     let cmd = Command::new("gos")
-        .version("0.3.5")
+        .version("0.4.0")
         .about("The Gos programming language")
         .arg(Arg::new("FILE").help("Run the Gos source file"))
         .arg(
