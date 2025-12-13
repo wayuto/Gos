@@ -283,6 +283,9 @@ impl Compiler {
 
                 self.exit_scope();
             }
+            Expr::For(_) => {
+                unimplemented!()
+            }
             Expr::FuncDecl(decl) => {
                 let jump_addr = self.code.len() as u32;
                 self.emit(Op::JUMP, &[0, 0]);

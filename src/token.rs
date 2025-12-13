@@ -32,11 +32,12 @@ pub enum TokenType {
     COLON,
     VARDECL,
     VAR,
-    IN,
     OUT,
     IF,
     ELSE,
     WHILE,
+    FOR,
+    IN,
     LABEL,
     GOTO,
     FUNCDECL,
@@ -64,7 +65,7 @@ pub enum VarType {
     Number,
     Bool,
     Str,
-    Array(usize),
+    Array(Option<usize>),
     Void,
 }
 

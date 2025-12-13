@@ -23,6 +23,7 @@ pub enum Expr {
     UnaryOp(UnaryOp),
     If(If),
     While(While),
+    For(For),
     FuncDecl(FuncDecl),
     FuncCall(FuncCall),
     Return(Return),
@@ -78,6 +79,13 @@ pub struct If {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct While {
     pub condition: Box<Expr>,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct For {
+    pub init: String,
+    pub iter: Box<Expr>,
     pub body: Box<Expr>,
 }
 

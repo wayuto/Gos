@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        ArrayAccess, ArrayAssign, BinOp, Expr, Extern, FuncCall, FuncDecl, Goto, If, Label,
+        ArrayAccess, ArrayAssign, BinOp, Expr, Extern, For, FuncCall, FuncDecl, Goto, If, Label,
         Program, Return, Stmt, UnaryOp, Val, Var, VarDecl, VarMod, While,
     },
     error::GosError,
@@ -102,6 +102,24 @@ impl<'a> Parser<'a> {
                     body: Box::new(body),
                 })
             }
+            TokenType::FOR => {
+                self.lexer.next_token();
+                let init = self.get_ident();
+                self.lexer.next_token();
+                if self.lexer.curr_tok().token != TokenType::IN {
+                    let mut err =
+                        GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                    err.unexpected_char(Some("in"), self.lexer.curr_ch());
+                }
+                self.lexer.next_token();
+                let iter = self.expr();
+                let body = self.stmt();
+                Expr::For(For {
+                    init,
+                    iter: Box::new(iter),
+                    body: Box::new(body),
+                })
+            }
             TokenType::PUB => {
                 self.lexer.next_token();
                 self.func_decl(true)
@@ -119,7 +137,7 @@ impl<'a> Parser<'a> {
                 if self.lexer.curr_tok().token == TokenType::EOF {
                     let mut err =
                         GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                    err.unexpected_char(Some('{'), self.lexer.curr_ch());
+                    err.unexpected_char(Some("{"), self.lexer.curr_ch());
                     err.panic();
                 }
                 exprs.push(self.ctrl());
@@ -152,7 +170,7 @@ impl<'a> Parser<'a> {
                 if self.lexer.curr_tok().token != TokenType::COLON {
                     let mut err =
                         GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                    err.unexpected_char(Some(':'), self.lexer.curr_ch());
+                    err.unexpected_char(Some(":"), self.lexer.curr_ch());
                     err.panic();
                 }
                 self.lexer.next_token();
@@ -173,7 +191,7 @@ impl<'a> Parser<'a> {
                 if self.lexer.curr_tok().token != TokenType::EQ {
                     let mut err =
                         GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                    err.unexpected_char(Some('='), self.lexer.curr_ch());
+                    err.unexpected_char(Some("="), self.lexer.curr_ch());
                     err.panic();
                 }
                 self.lexer.next_token();
@@ -197,9 +215,7 @@ impl<'a> Parser<'a> {
                 self.lexer.next_token();
                 Expr::Extern(Extern { func })
             }
-            TokenType::IF => self.ctrl(),
-            TokenType::WHILE => self.ctrl(),
-            TokenType::LBRACE => self.ctrl(),
+            TokenType::IF | TokenType::WHILE | TokenType::LBRACE => self.ctrl(),
             _ => self.logical(),
         }
     }
@@ -443,7 +459,7 @@ impl<'a> Parser<'a> {
                 if self.lexer.curr_tok().token != TokenType::RPAREN {
                     let mut err =
                         GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                    err.unexpected_char(Some(')'), self.lexer.curr_ch());
+                    err.unexpected_char(Some(")"), self.lexer.curr_ch());
                     err.panic();
                 }
                 self.lexer.next_token();
@@ -457,7 +473,7 @@ impl<'a> Parser<'a> {
                     if self.lexer.curr_tok().token == TokenType::EOF {
                         let mut err =
                             GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                        err.unexpected_char(Some(']'), self.lexer.curr_ch());
+                        err.unexpected_char(Some("]"), self.lexer.curr_ch());
                         err.panic();
                     }
                 }
@@ -465,7 +481,7 @@ impl<'a> Parser<'a> {
                 self.lexer.next_token();
                 return Expr::Val(Val {
                     value: Literal::Array(array.len(), array.clone()),
-                    typ: VarType::Array(array.len()),
+                    typ: VarType::Array(Some(array.len())),
                 });
             }
             TokenType::NEG => {
@@ -561,7 +577,7 @@ impl<'a> Parser<'a> {
                         if self.lexer.curr_tok().token != TokenType::RBRACKET {
                             let mut err =
                                 GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                            err.unexpected_char(Some(']'), self.lexer.curr_ch());
+                            err.unexpected_char(Some("]"), self.lexer.curr_ch());
                             err.panic();
                         }
                         self.lexer.next_token();
@@ -610,7 +626,7 @@ impl<'a> Parser<'a> {
         self.lexer.next_token();
         if self.lexer.curr_tok().token != TokenType::LPAREN {
             let mut err = GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-            err.unexpected_char(Some('('), self.lexer.curr_ch());
+            err.unexpected_char(Some("("), self.lexer.curr_ch());
             err.panic();
         }
         while self.lexer.curr_tok().token != TokenType::RPAREN {
@@ -618,7 +634,7 @@ impl<'a> Parser<'a> {
                 || self.lexer.curr_tok().token == TokenType::LBRACE
             {
                 let mut err = GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
-                err.unexpected_char(Some(')'), self.lexer.curr_ch());
+                err.unexpected_char(Some(")"), self.lexer.curr_ch());
                 err.panic();
             }
             if self.lexer.curr_tok().token == TokenType::IDENT {

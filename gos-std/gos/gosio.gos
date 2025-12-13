@@ -1,5 +1,5 @@
 extern write
 extern read
 extern print
-extern mprint
+extern println
 extern input

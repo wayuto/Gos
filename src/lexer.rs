@@ -210,22 +210,57 @@ impl<'a> Lexer<'a> {
                         col: self.tok.col,
                     }
                 }
+                "str" => {
+                    self.tok = Token {
+                        token: TokenType::Type(VarType::Str),
+                        value: None,
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    }
+                }
+                "bool" => {
+                    self.tok = Token {
+                        token: TokenType::Type(VarType::Bool),
+                        value: None,
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    }
+                }
+                "void" => {
+                    self.tok = Token {
+                        token: TokenType::Type(VarType::Void),
+                        value: None,
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    }
+                }
                 "arr" => {
                     if self.current() != '<' {
                         let mut err = GosError::new(self.tok.row, self.tok.col);
-                        err.unexpected_char(Some('<'), self.current());
+                        err.unexpected_char(Some("<"), self.current());
                         err.panic();
                     }
                     self.bump();
-                    let len = self.parse_number();
+                    let len: Option<usize>;
+                    if self.current().is_numeric() {
+                        len = Some(self.parse_number() as usize);
+                    } else if self.current() == '_' {
+                        len = None;
+                        self.bump();
+                    } else {
+                        let mut err = GosError::new(self.tok.row, self.tok.col);
+                        err.unexpected_char(None, self.current());
+                        err.panic();
+                        panic!();
+                    }
                     if self.current() != '>' {
                         let mut err = GosError::new(self.tok.row, self.tok.col);
-                        err.unexpected_char(Some('>'), self.current());
+                        err.unexpected_char(Some(">"), self.current());
                         err.panic();
                     }
                     self.bump();
                     self.tok = Token {
-                        token: TokenType::Type(VarType::Array(len as usize)),
+                        token: TokenType::Type(VarType::Array(len)),
                         value: None,
                         row: self.tok.row,
                         col: self.tok.col,
@@ -234,6 +269,22 @@ impl<'a> Lexer<'a> {
                 "sizeof" => {
                     self.tok = Token {
                         token: TokenType::SIZEOF,
+                        value: None,
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    }
+                }
+                "for" => {
+                    self.tok = Token {
+                        token: TokenType::FOR,
+                        value: None,
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    }
+                }
+                "in" => {
+                    self.tok = Token {
+                        token: TokenType::IN,
                         value: None,
                         row: self.tok.row,
                         col: self.tok.col,
@@ -304,7 +355,7 @@ impl<'a> Lexer<'a> {
             while self.current() != '\'' {
                 if self.current() == '\0' {
                     let mut err = GosError::new(self.tok.row, self.tok.col);
-                    err.unexpected_char(Some('\\'), self.current());
+                    err.unexpected_char(Some("\\"), self.current());
                     err.panic();
                 }
                 s.push(self.current());
@@ -578,6 +629,7 @@ impl<'a> Lexer<'a> {
             while self.current() != '\n' && self.current() != '\0' {
                 self.bump();
             }
+            self.next_token();
             return;
         } else {
             let mut err = GosError::new(self.tok.row, self.tok.col);

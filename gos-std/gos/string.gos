@@ -1,4 +1,6 @@
 extern strlen
+extern strcpy
+extern strcat
 extern memcmp
 extern memcpy
 extern memset

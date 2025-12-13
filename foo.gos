@@ -1,27 +1,23 @@
 $import "gosio"
-$import "convert"
+$import "string"
+
 
 pub fun main() {
-    let x: arr<5> = [1 5 3 2 4]
-    let i: num = 0
-    while i < sizeof x {
-        let j: num = 0
-        while j < sizeof x {
-            if x[i] < x[j] {
-                let tmp: num = x[i]
-                x[i] = x[j]
-                x[j] = tmp
+    let x: arr<_> = [5 2 3 1 4]
+    let N: num = sizeof(x) 
+
+    for i in range(N - 1) {
+        for j in range(N - 1 - i) {
+            if x[j] > x[j + 1] {
+                let temp: num = x[j]
+                x[j] = x[j + 1]
+                x[j + 1] = temp
             }
-            j++
         }
-        i++
     }
-    let k: num = 0
-    while k < sizeof x {
-        write(1 itoa(x[k]) 1)
-        write(1 ' ' 1)
-        k++
+
+    for i in x {
+        println(itoa(i))
     }
-    write(1 "\n" 1)
     return 0
 }

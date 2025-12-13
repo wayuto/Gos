@@ -1,0 +1,12 @@
+extern range
+
+pub fn find(a e) {
+    let i: num = 0
+    while i < sizeof a {
+        if a[i] == e {
+            return i
+        }
+        i++
+    }
+    return (-1)
+}

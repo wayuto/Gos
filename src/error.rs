@@ -25,7 +25,7 @@ impl GosError {
         }
     }
 
-    pub fn unexpected_char(&mut self, expected: Option<char>, found: char) -> () {
+    pub fn unexpected_char(&mut self, expected: Option<&str>, found: char) -> () {
         match expected {
             Some(ch) => {
                 self.err_type =

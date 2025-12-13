@@ -16,12 +16,19 @@ pub extern "C" fn read(fd: usize, buffer: *mut u8, n: usize) -> isize {
 #[unsafe(no_mangle)]
 pub extern "C" fn print(fmt: *const u8) -> isize {
     let len = strlen(fmt);
+    write(1, fmt, len)
+}
+
+#[inline(never)]
+#[unsafe(no_mangle)]
+pub extern "C" fn println(fmt: *const u8) -> isize {
+    let len = strlen(fmt);
     write(1, fmt, len) + write(1, b"\n".as_ptr(), 1)
 }
 
 #[inline(never)]
 #[unsafe(no_mangle)]
-pub extern "C" fn mprint(args: *const *const u8) -> isize {
+pub extern "C" fn printf(args: *const *const u8) -> isize {
     if args.is_null() {
         return write(1, b"\n".as_ptr(), 1);
     }

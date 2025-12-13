@@ -6,10 +6,10 @@ use crate::{
 };
 
 macro_rules! assemble {
-    ($buf:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {
-        $buf.push_str(&format!(concat!("\n", $fmt) $(, $arg)*))
-    };
-}
+        ($buf:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {
+            $buf.push_str(&format!(concat!("\n", $fmt) $(, $arg)*))
+        };
+    }
 
 struct Scope {
     vars: HashMap<String, u32>,
@@ -24,7 +24,6 @@ pub struct Compiler {
     base_offset: u32,
     in_function: bool,
     str_cache: HashMap<String, String>,
-    arr_lens: HashMap<String, usize>,
     strs: usize,
 }
 
@@ -37,7 +36,6 @@ impl Compiler {
             base_offset: 1,
             in_function: false,
             str_cache: HashMap::new(),
-            arr_lens: HashMap::new(),
             strs: 0,
         }
     }
@@ -168,25 +166,26 @@ impl Compiler {
                     assemble!(self.text, "push rax");
                 }
                 Literal::Str(s) => {
-                    if self.data.is_empty() {
-                        assemble!(self.data, "section .data");
-                    }
-                    if self.str_cache.contains_key(&s) {
+                    let label = if let Some(l) = self.str_cache.get(&s) {
+                        l.clone()
+                    } else {
+                        let new_label = format!(".S{}", self.strs);
+                        self.strs += 1;
+
+                        self.str_cache.insert(s.clone(), new_label.clone());
+
                         assemble!(
-                            self.text,
-                            "lea rax, [rel {}]",
-                            self.str_cache.get(&s).unwrap()
+                            self.data,
+                            "{}: db \"{}\", 0",
+                            new_label,
+                            s.replace('\\', "\\\\").replace('\"', "\\\"")
                         );
-                        assemble!(self.text, "push rax");
-                        return;
-                    }
-                    let label = format!("L.str_{}", self.strs);
-                    self.strs += 1;
-                    let raw = format!("{:?}", &s);
-                    assemble!(self.data, "{} db `{}`, 0", label, &raw[1..&raw.len() - 1]);
-                    assemble!(self.text, "lea rax, [rel {}]", label);
+
+                        new_label
+                    };
+
+                    assemble!(self.text, "mov rax, {}", label);
                     assemble!(self.text, "push rax");
-                    self.str_cache.insert(s, label);
                 }
                 Literal::Bool(b) => {
                     let val = if b { 1 } else { 0 };
@@ -291,7 +290,6 @@ impl Compiler {
                 }
                 assemble!(self.text, "push rax");
             }
-
             Expr::UnaryOp(unary) => {
                 match *unary.argument.clone() {
                     Expr::Var(var) => {
@@ -305,13 +303,14 @@ impl Compiler {
                             assemble!(self.text, "dec qword [rbp - {}]", offset);
                             return;
                         } else if unary.operator == TokenType::SIZEOF {
-                            if let Some(&len) = self.arr_lens.get(&name) {
-                                assemble!(self.text, "mov rax, {}", len);
-                                assemble!(self.text, "push rax");
-                                return;
-                            } else {
-                                panic!("Variable '{}' not found or is not an array", name);
-                            }
+                            let offset = self
+                                .find_var(&name)
+                                .unwrap_or_else(|| panic!("Variable '{}' not found", name));
+
+                            assemble!(self.text, "mov rax, [rbp - {}]", offset);
+                            assemble!(self.text, "mov rax, [rax]");
+                            assemble!(self.text, "push rax");
+                            return;
                         }
                     }
                     _ => {}
@@ -324,9 +323,46 @@ impl Compiler {
                     assemble!(self.text, "push rax");
                 }
             }
+
             Expr::VarDecl(decl) => {
-                if let VarType::Array(len) = decl.typ {
-                    self.arr_lens.insert(decl.name.clone(), len);
+                let declared_len_opt = match decl.typ {
+                    VarType::Array(opt_n) => opt_n,
+                    _ => None,
+                };
+
+                if let Expr::Val(val) = *decl.value.clone() {
+                    if let Literal::Array(_init_len, init_arr) = val.value {
+                        let init_len = init_arr.len();
+                        let final_n: usize;
+
+                        match declared_len_opt {
+                            Some(fixed_n) => {
+                                if init_len > fixed_n {
+                                    panic!(
+                                        "Array initializer list length ({}) exceeds declared length ({}) for variable '{}'",
+                                        init_len, fixed_n, decl.name
+                                    );
+                                }
+                                final_n = fixed_n;
+                            }
+                            None => {
+                                if init_len == 0 {
+                                    panic!(
+                                        "Cannot infer length of empty array '[]' in var '{}'",
+                                        decl.name
+                                    );
+                                }
+                                final_n = init_len;
+                            }
+                        }
+
+                        self.alloc_arr(final_n, init_arr);
+
+                        let offset = self.store_var(decl.name.clone());
+                        assemble!(self.text, "pop rax");
+                        assemble!(self.text, "mov [rbp - {}], rax", offset);
+                        return;
+                    }
                 }
 
                 self.compile_expr(*decl.value);
@@ -362,6 +398,7 @@ impl Compiler {
                         | Expr::FuncDecl(_)
                         | Expr::Return(_)
                         | Expr::While(_)
+                        | Expr::For(_)
                         | Expr::If(_)
                         | Expr::Label(_)
                         | Expr::Goto(_)
@@ -490,6 +527,53 @@ impl Compiler {
                 assemble!(self.text, "jmp .{}", loop_start_label);
                 assemble!(self.text, ".{}:", loop_end_label);
             }
+            Expr::For(f) => {
+                let loop_id = self.text.len();
+                let loop_start_label = format!("for_start_{:x}", loop_id);
+                let loop_end_label = format!("for_end_{:x}", loop_id);
+                self.enter_scope(false);
+                self.compile_expr(*f.iter.clone());
+                assemble!(self.text, "pop rax");
+                let ptr_name = format!(".for_ptr_{}", loop_id);
+                let ptr_offset = self.store_var(ptr_name);
+                assemble!(self.text, "mov [rbp - {}], rax", ptr_offset);
+                let idx_name = format!(".for_idx_{}", loop_id);
+                let idx_offset = self.store_var(idx_name);
+                assemble!(self.text, "xor rax, rax");
+                assemble!(self.text, "mov [rbp - {}], rax", idx_offset);
+                let item_offset = self.store_var(f.init.clone());
+                assemble!(self.text, ".{}:", loop_start_label);
+                assemble!(self.text, "mov rax, [rbp - {}]", idx_offset);
+                assemble!(self.text, "mov r10, [rbp - {}]", ptr_offset);
+                assemble!(self.text, "mov rbx, [r10]");
+
+                assemble!(self.text, "cmp rax, rbx");
+                assemble!(self.text, "jge .{}", loop_end_label);
+                assemble!(self.text, "mov rbx, [rbp - {}]", idx_offset);
+                assemble!(self.text, "mov rax, [r10 + 8 + rbx * 8]");
+                assemble!(self.text, "mov [rbp - {}], rax", item_offset);
+                self.compile_expr(*f.body.clone());
+                let pushes_value = matches!(
+                    *f.body.clone(),
+                    Expr::Val(_)
+                        | Expr::Var(_)
+                        | Expr::BinOp(_)
+                        | Expr::UnaryOp(_)
+                        | Expr::ArrayAccess(_)
+                        | Expr::FuncCall(_)
+                );
+
+                if pushes_value {
+                    assemble!(self.text, "pop rax");
+                }
+                assemble!(self.text, "inc qword [rbp - {}]", idx_offset);
+                assemble!(self.text, "jmp .{}", loop_start_label);
+                assemble!(self.text, ".{}:", loop_end_label);
+                assemble!(self.text, "xor rax, rax");
+                assemble!(self.text, "push rax");
+
+                self.exit_scope();
+            }
             Expr::If(if_expr) => {
                 let id = self.text.len();
                 let else_label = format!("if_else_{:x}", id);
@@ -531,7 +615,7 @@ impl Compiler {
                     .unwrap_or_else(|| panic!("Array '{}' not found", aa.array));
 
                 assemble!(self.text, "mov rax, [rbp - {}]", var_offset);
-                assemble!(self.text, "mov rax, [rax + rbx * 8]");
+                assemble!(self.text, "mov rax, [rax + 8 + rbx * 8]");
                 assemble!(self.text, "push rax");
             }
             Expr::ArrayAssign(aa) => {
@@ -544,7 +628,7 @@ impl Compiler {
                 assemble!(self.text, "pop rcx");
                 self.compile_expr(*aa.offset.clone());
                 assemble!(self.text, "pop rbx");
-                assemble!(self.text, "mov [r10 + rbx * 8], rcx");
+                assemble!(self.text, "mov [r10 + 8 + rbx * 8], rcx");
             }
             Expr::Extern(ext) => {
                 assemble!(self.text, "extern {}", ext.func);
@@ -553,18 +637,24 @@ impl Compiler {
     }
 
     fn alloc_arr(&mut self, len: usize, arr: Vec<Expr>) {
-        let block_size = len * 8;
-        let padding = (16 - (block_size % 16)) % 16;
-        let padded_block_size = block_size + padding;
+        let data_size = len * 8;
+
+        let total_block_size = data_size + 8;
+
+        let padding = (16 - (total_block_size % 16)) % 16;
+        let padded_block_size = total_block_size + padding;
 
         assemble!(self.text, "sub rsp, {}", padded_block_size);
         assemble!(self.text, "mov r10, rsp");
 
+        assemble!(self.text, "mov rax, {}", len);
+        assemble!(self.text, "mov [r10], rax");
+
         for (i, elem) in arr.iter().enumerate() {
             self.compile_expr(elem.clone());
-            assemble!(self.text, "pop rbx");
+            assemble!(self.text, "pop rax");
 
-            assemble!(self.text, "mov [r10 + {}], rbx", i * 8);
+            assemble!(self.text, "mov [r10 + {}], rax", i * 8 + 8);
         }
 
         assemble!(self.text, "push r10");
