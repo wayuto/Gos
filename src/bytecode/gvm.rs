@@ -1,4 +1,4 @@
-use std::{io::stdin, process::exit};
+use std::process::exit;
 
 use crate::{bytecode::Bytecode, bytecode::Op, token::Literal};
 
@@ -193,30 +193,6 @@ impl GVM {
                             panic!("TypeError: Wrong types for OR operation");
                         }
                     }
-                }
-                Op::OUT => match self.stack.pop().unwrap() {
-                    Literal::Bool(b) => {
-                        print!("{}", b);
-                    }
-                    Literal::Number(n) => {
-                        print!("{}", n);
-                    }
-                    Literal::Str(s) => {
-                        print!("{}", s);
-                    }
-                    Literal::Void => {
-                        print!("void");
-                    }
-                },
-                Op::IN => {
-                    let slot = self.bytecode.chunk.code[self.ip] as usize;
-                    self.ip += 1;
-
-                    let mut val = String::new();
-                    stdin()
-                        .read_line(&mut val)
-                        .expect("GVM: Failed to read line");
-                    self.slots[self.curr_base_slot + slot] = Literal::Str(val);
                 }
                 Op::POP => {
                     self.stack.pop();

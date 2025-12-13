@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        BinOp, Expr, Extern, FuncCall, FuncDecl, Goto, If, Label, Program, Return, Stmt, UnaryOp,
-        Val, Var, VarDecl, VarMod, While,
+        ArrayAccess, BinOp, Expr, Extern, FuncCall, FuncDecl, Goto, If, Label, Program, Return,
+        Stmt, UnaryOp, Val, Var, VarDecl, VarMod, While,
     },
     error::GosError,
     lexer::Lexer,
@@ -400,6 +400,23 @@ impl<'a> Parser<'a> {
             }
             self.lexer.next_token();
             return expr;
+        } else if self.lexer.curr_tok().token == TokenType::LBRACKET {
+            self.lexer.next_token();
+            let mut array: Vec<Expr> = Vec::new();
+            while self.lexer.curr_tok().token != TokenType::RBRACKET {
+                array.push(self.expr());
+                if self.lexer.curr_tok().token == TokenType::EOF {
+                    let mut err =
+                        GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                    err.unexpected_char(Some(']'), self.lexer.curr_ch());
+                    err.panic();
+                }
+            }
+
+            self.lexer.next_token();
+            return Expr::Val(Val {
+                value: Literal::Array(array),
+            });
         } else if self.lexer.curr_tok().token == TokenType::NEG {
             self.lexer.next_token();
             let argument = self.expr();
@@ -473,6 +490,21 @@ impl<'a> Parser<'a> {
                     return Expr::VarMod(VarMod {
                         name,
                         value: Box::new(val),
+                    });
+                }
+                TokenType::LBRACKET => {
+                    self.lexer.next_token();
+                    let offset = self.expr();
+                    if self.lexer.curr_tok().token != TokenType::RBRACKET {
+                        let mut err =
+                            GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                        err.unexpected_char(Some(']'), self.lexer.curr_ch());
+                        err.panic();
+                    }
+                    self.lexer.next_token();
+                    return Expr::ArrayAccess(ArrayAccess {
+                        array: name,
+                        offset: Box::new(offset),
                     });
                 }
                 _ => return Expr::Var(Var { name }),

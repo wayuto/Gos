@@ -175,7 +175,25 @@ impl Compiler {
                     assemble!(self.text, "mov rax, {}", val);
                     assemble!(self.text, "push rax");
                 }
-                _ => {}
+                Literal::Array(arr) => {
+                    let size = arr.len() as u32;
+                    let block_size = size * 8;
+
+                    assemble!(self.text, "sub rsp, {}", block_size);
+
+                    assemble!(self.text, "mov r10, rsp");
+
+                    for (i, elem) in arr.iter().enumerate() {
+                        self.compile_expr(elem.clone());
+                        assemble!(self.text, "pop rbx");
+                        assemble!(self.text, "mov [rsp + {}], rbx", i * 8);
+                    }
+                    assemble!(self.text, "push r10");
+                }
+                Literal::Void => {
+                    assemble!(self.text, "xor rax, rax");
+                    assemble!(self.text, "push rax");
+                }
             },
             Expr::Var(var) => {
                 let offset = self
@@ -474,6 +492,19 @@ impl Compiler {
             }
             Expr::Goto(goto) => {
                 assemble!(self.text, "jmp {}", goto.label);
+            }
+            Expr::ArrayAccess(aa) => {
+                self.compile_expr(*aa.offset);
+                assemble!(self.text, "pop rbx");
+
+                let var_offset = self
+                    .find_var(&aa.array)
+                    .unwrap_or_else(|| panic!("Array '{}' not found", aa.array));
+
+                assemble!(self.text, "mov rax, [rbp - {}]", var_offset);
+
+                assemble!(self.text, "mov rax, [rax + rbx * 8]");
+                assemble!(self.text, "push rax");
             }
             Expr::Extern(ext) => {
                 assemble!(self.text, "extern {}", ext.func);

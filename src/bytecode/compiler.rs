@@ -1,21 +1,19 @@
 use core::panic;
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-
 use crate::{
     ast::{Expr, Program},
     bytecode::Op,
     token::{Literal, TokenType},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Bytecode {
     pub chunk: Chunk,
     pub max_slot: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: Vec<Literal>,
@@ -379,6 +377,9 @@ impl Compiler {
                     }
                 }
             }
+            Expr::ArrayAccess(_) => {
+                unimplemented!()
+            }
             Expr::Extern(_) => {
                 panic!("Only supported in Gos/Native");
             }
@@ -421,7 +422,7 @@ impl Bytecode {
                             }
                         }
                     }
-                    Op::LOADVAR | Op::STOREVAR | Op::IN => {
+                    Op::LOADVAR | Op::STOREVAR => {
                         if i + 1 < self.chunk.code.len() {
                             let slot = self.chunk.code[i + 1];
                             print!(" [slot {}]", slot);

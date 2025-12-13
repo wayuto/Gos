@@ -16,27 +16,40 @@ pub extern "C" fn read(fd: usize, buffer: *mut u8, n: usize) -> isize {
 #[unsafe(no_mangle)]
 pub extern "C" fn print(fmt: *const u8) -> isize {
     let len = strlen(fmt);
-    write(1, fmt, len)
+    write(1, fmt, len) + write(1, b"\n".as_ptr(), 1)
 }
 
 #[inline(never)]
 #[unsafe(no_mangle)]
-pub extern "C" fn println(fmt: *const u8) -> isize {
-    let len = strlen(fmt);
-
-    let str_result = write(1, fmt, len);
-    if str_result < 0 {
-        return str_result;
+pub extern "C" fn mprint(args: *const *const u8) -> isize {
+    if args.is_null() {
+        return write(1, b"\n".as_ptr(), 1);
     }
 
-    let newline = b"\n".as_ptr();
-    let nl_result = write(1, newline, 1);
+    let mut ret: isize = 0;
+    let mut i = 0;
 
-    if nl_result < 0 {
-        nl_result
-    } else {
-        str_result + 1
+    loop {
+        unsafe {
+            let current_string_ptr = *args.add(i);
+
+            if current_string_ptr.is_null() {
+                break;
+            }
+
+            let result = print(current_string_ptr);
+
+            if result < 0 {
+                return result;
+            }
+            ret += result;
+            i += 1;
+        }
     }
+
+    let nl = write(1, b"\n".as_ptr(), 1);
+
+    if nl < 0 { nl } else { ret + 1 }
 }
 
 static mut BUFFER: [u8; 64] = [0; 64];

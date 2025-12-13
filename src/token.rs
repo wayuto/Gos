@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
+use crate::ast::Expr;
 
-#[derive(PartialEq, PartialOrd, Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TokenType {
     ADD,
     SUB,
@@ -27,6 +27,8 @@ pub enum TokenType {
     RPAREN,
     LBRACE,
     RBRACE,
+    LBRACKET,
+    RBRACKET,
     COLON,
     VARDECL,
     VAR,
@@ -46,11 +48,12 @@ pub enum TokenType {
     EOF,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Literal {
     Number(i64),
     Bool(bool),
     Str(String),
+    Array(Vec<Expr>),
     Void,
 }
 

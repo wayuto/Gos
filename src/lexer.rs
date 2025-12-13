@@ -519,8 +519,26 @@ impl<'a> Lexer<'a> {
             };
             self.bump();
             return;
+        } else if self.current() == '[' {
+            self.tok = Token {
+                token: TokenType::LBRACKET,
+                value: None,
+                row: self.tok.row,
+                col: self.tok.col,
+            };
+            self.bump();
+            return;
+        } else if self.current() == ']' {
+            self.tok = Token {
+                token: TokenType::RBRACKET,
+                value: None,
+                row: self.tok.row,
+                col: self.tok.col,
+            };
+            self.bump();
+            return;
         } else if self.current() == '#' {
-            while self.current() != '\n' || self.current() != '\0' {
+            while self.current() != '\n' && self.current() != '\0' {
                 self.bump();
             }
             return;

@@ -1,10 +1,4 @@
-use crate::{
-    bytecode::GVM,
-    lexer::Lexer,
-    parser::Parser,
-    preprocessor::Preprocessor,
-    serialize::{compile, load},
-};
+use crate::{bytecode::GVM, lexer::Lexer, parser::Parser, preprocessor::Preprocessor};
 use clap::{Arg, ArgAction, Command};
 use std::{fs, path::Path};
 
@@ -15,39 +9,25 @@ pub mod lexer;
 pub mod native;
 pub mod parser;
 pub mod preprocessor;
-pub mod serialize;
 pub mod token;
 
 fn run_bytecode(file: &String) -> () {
-    let ext = Path::new(file)
-        .extension()
-        .and_then(|s| s.to_str())
-        .map(|s| s.to_lowercase());
-    match ext.as_deref() {
-        Some("gbc") => {
-            let bytecode = load(file.to_string());
-            let mut gvm = GVM::new(bytecode);
-            gvm.run();
-        }
-        _ => {
-            let src = fs::read_to_string(file).unwrap();
-            let path = Path::new(&file.clone())
-                .parent()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string();
-            let mut preprocessor = Preprocessor::new(src.as_str(), path);
-            let code = preprocessor.preprocess();
-            let lexer = Lexer::new(code.as_str());
-            let mut parser = Parser::new(lexer);
-            let ast = parser.parse();
-            let mut compiler = bytecode::Compiler::new();
-            let bytecode = compiler.compile(ast);
-            let mut gvm = GVM::new(bytecode);
-            gvm.run();
-        }
-    }
+    let src = fs::read_to_string(file).unwrap();
+    let path = Path::new(&file.clone())
+        .parent()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let mut preprocessor = Preprocessor::new(src.as_str(), path);
+    let code = preprocessor.preprocess();
+    let lexer = Lexer::new(code.as_str());
+    let mut parser = Parser::new(lexer);
+    let ast = parser.parse();
+    let mut compiler = bytecode::Compiler::new();
+    let bytecode = compiler.compile(ast);
+    let mut gvm = GVM::new(bytecode);
+    gvm.run();
 }
 
 fn print_ast(file: &String) -> () {
@@ -80,32 +60,21 @@ fn print_pred(file: &String) -> () {
 }
 
 fn print_bytecode(file: &String) -> () {
-    let ext = Path::new(file)
-        .extension()
-        .and_then(|s| s.to_str())
-        .map(|s| s.to_lowercase());
-    match ext.as_deref() {
-        Some("gbc") => {
-            load(file.to_string()).print();
-        }
-        _ => {
-            let src = fs::read_to_string(file).unwrap();
-            let path = Path::new(&file.clone())
-                .parent()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string();
-            let mut preprocessor = Preprocessor::new(src.as_str(), path);
-            let code = preprocessor.preprocess();
-            let lexer = Lexer::new(code.as_str());
-            let mut parser = Parser::new(lexer);
-            let ast = parser.parse();
-            let mut compiler = bytecode::Compiler::new();
-            let bytecode = compiler.compile(ast);
-            bytecode.print();
-        }
-    }
+    let src = fs::read_to_string(file).unwrap();
+    let path = Path::new(&file.clone())
+        .parent()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let mut preprocessor = Preprocessor::new(src.as_str(), path);
+    let code = preprocessor.preprocess();
+    let lexer = Lexer::new(code.as_str());
+    let mut parser = Parser::new(lexer);
+    let ast = parser.parse();
+    let mut compiler = bytecode::Compiler::new();
+    let bytecode = compiler.compile(ast);
+    bytecode.print();
 }
 
 fn compile_native(file: &String, typ: &str, no_std: bool) -> () {
@@ -187,18 +156,12 @@ fn main() {
     let cmd = Command::new("gos")
         .version("0.3.5")
         .about("The Gos programming language")
-        .arg(Arg::new("FILE").help("Run the Gos source/bytecode file"))
+        .arg(Arg::new("FILE").help("Run the Gos source file"))
         .arg(
             Arg::new("ast")
                 .short('a')
                 .long("ast")
                 .help("Print AST of the Gos source file"),
-        )
-        .arg(
-            Arg::new("bytecode")
-                .short('b')
-                .long("bytecode")
-                .help("Compile the Gos source file to bytecode"),
         )
         .arg(
             Arg::new("compile")
@@ -234,7 +197,7 @@ fn main() {
             Arg::new("disassemble")
                 .short('d')
                 .long("disassemble")
-                .help("Run the Gos source/bytecode file"),
+                .help("Run the Gos source file"),
         );
 
     if std::env::args().len() == 1 {
@@ -250,8 +213,6 @@ fn main() {
         print_ast(file);
     } else if let Some(file) = matches.get_one::<String>("preprocess") {
         print_pred(file);
-    } else if let Some(file) = matches.get_one::<String>("bytecode") {
-        compile(file.to_string());
     } else if let Some(file) = matches.get_one::<String>("disassemble") {
         print_bytecode(file);
     } else if let Some(file) = matches.get_one::<String>("compile") {
