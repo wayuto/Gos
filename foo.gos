@@ -1,5 +1,4 @@
 $import "gosio"
-$import "string"
 $import "convert"
 $import "array"
 
