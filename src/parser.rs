@@ -160,7 +160,7 @@ impl<'a> Parser<'a> {
                     TokenType::Type(VarType::Number) => VarType::Number,
                     TokenType::Type(VarType::Bool) => VarType::Bool,
                     TokenType::Type(VarType::Str) => VarType::Str,
-                    TokenType::Type(VarType::Array(n)) => VarType::Array(n.to_owned()),
+                    TokenType::Type(VarType::Array(n)) => VarType::Array(*n),
                     _ => {
                         let mut err =
                             GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
