@@ -110,7 +110,7 @@ let ld_status = std::process::Command::new("ld")
 $import "stdlib"
 
 pub fun main() {
-    println("Hello world!")
+    print("Hello world!")
     return 0
 }
 ```
@@ -134,20 +134,20 @@ Hello world!
 - ### _**Variables**_
 
 ```gos
-let x = 1
-let y = 2
-x + y
+let x: num = 1
+let y: num = 2
+let a: arr<5> = [1 2 3 4 5]
 ```
 
 - ### _**Flow Control**_
 
 ```gos
-let x = 1
-let y = 2
-if (x < y) println(itoa(y)) else println(itoa(x))
+let x: num = 1
+let y: num = 2
+if (x < y) print(itoa(y)) else print(itoa(x))
 
 while true {
-    println("I love you!")
+    print("I love you!")
 }
 ```
 
@@ -168,13 +168,13 @@ goto label
 - ### _**Block Scope**_
 
 ```gos
-let x = {
-    let a = 1
-    let b = 2
+let x: num = {
+    let a: num = 1
+    let b: num = 2
     a + b
 }
 
-let y = if true 1 else 0
+let y: num = if true 1 else 0
 ```
 
 - ### _**Importing module**_
@@ -182,13 +182,13 @@ let y = if true 1 else 0
 ```gos
 $import "fibonacci.gos"
 
-let n = 10
-let result = itoa(f(n))
-println(result)
+let n: num = 10
+let result: str = itoa(f(n))
+print(result)
 
 # Only for Gos/Native
-extern println
-println("Hello world!")
+extern print
+print("Hello world!")
 ```
 
 - ### _**Interaction with C**_
@@ -220,7 +220,7 @@ int add(int x, int y) {
 extern add
 
 pub fun main() {
-	let sum add(1 2)
+	let sum: num = add(1 2)
 	return 0
 }
 ```
