@@ -6,8 +6,8 @@ pub fun main() {
     let x: arr<_> = [5 2 3 1 4]
     let N: num = sizeof x
 
-    for i in range(N - 1) {
-        for j in range(N - 1 - i) {
+    for i in 0..N-1 {
+        for j in 0..N-1-i {
             if x[j] > x[j + 1] {
                 let temp: num = x[j]
                 x[j] = x[j + 1]

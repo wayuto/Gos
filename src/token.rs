@@ -48,6 +48,7 @@ pub enum TokenType {
     PUB,
     Type(VarType),
     SIZEOF,
+    RANGE,
     EOF,
 }
 

@@ -294,6 +294,7 @@ impl<'a> Parser<'a> {
             || self.lexer.curr_tok().token == TokenType::COMPGE
             || self.lexer.curr_tok().token == TokenType::COMPAND
             || self.lexer.curr_tok().token == TokenType::COMPOR
+            || self.lexer.curr_tok().token == TokenType::RANGE
         {
             let op = self.lexer.curr_tok().token;
             self.lexer.next_token();
@@ -335,6 +336,19 @@ impl<'a> Parser<'a> {
                             return Expr::Val(Val {
                                 value: Literal::Bool(n <= m),
                                 typ: VarType::Bool,
+                            });
+                        }
+                        TokenType::RANGE => {
+                            let mut arr: Vec<Expr> = Vec::new();
+                            for i in n..m {
+                                arr.push(Expr::Val(Val {
+                                    value: Literal::Number(i),
+                                    typ: VarType::Number,
+                                }));
+                            }
+                            return Expr::Val(Val {
+                                value: Literal::Array((m - n) as usize, arr),
+                                typ: VarType::Array(Some((m - n) as usize)),
                             });
                         }
                         _ => {}

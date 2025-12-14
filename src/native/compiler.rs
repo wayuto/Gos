@@ -286,6 +286,13 @@ impl Compiler {
                     TokenType::LOGNOT => {
                         assemble!(self.text, "not rax")
                     }
+                    TokenType::RANGE => {
+                        assemble!(self.text, "mov rdi, rax");
+                        assemble!(self.text, "mov rsi, rbx");
+                        let func_name = "range";
+                        assemble!(self.text, "call {}", func_name);
+                    }
+
                     _ => {}
                 }
                 assemble!(self.text, "push rax");

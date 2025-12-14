@@ -51,11 +51,11 @@ impl<'a> Lexer<'a> {
             self.bump();
         }
 
-        if self.current() == '.' {
-            let mut err = GosError::new(self.tok.row, self.tok.col);
-            err.unimplemented("float number");
-            err.panic();
-        }
+        // if self.current() == '.' {
+        //     let mut err = GosError::new(self.tok.row, self.tok.col);
+        //     err.unimplemented("float number");
+        //     err.panic();
+        // }
 
         int_part
     }
@@ -606,6 +606,22 @@ impl<'a> Lexer<'a> {
                 col: self.tok.col,
             };
             self.bump();
+            return;
+        } else if self.current() == '.' {
+            self.bump();
+            if self.current() == '.' {
+                self.tok = Token {
+                    token: TokenType::RANGE,
+                    value: None,
+                    row: self.tok.row,
+                    col: self.tok.col,
+                };
+                self.bump();
+            } else {
+                let mut err = GosError::new(self.tok.row, self.tok.col);
+                err.unexpected_char(Some("."), self.current());
+                err.panic();
+            }
             return;
         } else if self.current() == '[' {
             self.tok = Token {
