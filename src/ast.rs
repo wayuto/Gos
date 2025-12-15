@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::token::{Literal, TokenType, VarType};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -72,7 +74,7 @@ pub struct UnaryOp {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct If {
     pub condition: Box<Expr>,
-    pub then: Box<Expr>,
+    pub then_branch: Box<Expr>,
     pub else_branch: Option<Box<Expr>>,
 }
 

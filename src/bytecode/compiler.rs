@@ -242,7 +242,7 @@ impl Compiler {
                 self.emit(Op::JUMPIFFALSE, &[0, 0]);
 
                 self.enter_scope();
-                self.compile_expr(*i.then);
+                self.compile_expr(*i.then_branch);
                 self.exit_scope();
 
                 let mut else_branch_addr: u32 = 1;

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::ast::Expr;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

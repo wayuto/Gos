@@ -1,3 +1,4 @@
-pub fun main(n: num): num {
-    let x: num = 1
+pub fun main(): num {
+    let x: num = 0
+    return x
 }

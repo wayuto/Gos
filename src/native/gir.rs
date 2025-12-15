@@ -8,7 +8,7 @@ pub enum IRType {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IRConst {
-    I64(i64),
+    Number(i64),
     Bool(bool),
     Str(String),
     Void,
@@ -19,11 +19,12 @@ pub enum Operand {
     Temp(usize, IRType),
     Var(String),
     Const(IRConst),
+    ConstIdx(usize),
     Label(String),
     Function(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Op {
     Add,
     Sub,
@@ -35,6 +36,15 @@ pub enum Op {
     Ge,
     Lt,
     Le,
+    And,
+    Or,
+    LAnd,
+    LOr,
+    Xor,
+    Neg,
+    Inc,
+    Dec,
+    SizeOf,
     Move,
     Load,
     Store,
@@ -43,7 +53,7 @@ pub enum Op {
     Return,
     Jump,
     JumpIfFalse,
-    Label,
+    Label(String),
     Nop,
 }
 

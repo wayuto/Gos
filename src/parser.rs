@@ -50,7 +50,7 @@ impl<'a> Parser<'a> {
                     }
                     return Expr::If(If {
                         condition: Box::new(cond),
-                        then: Box::new(body),
+                        then_branch: Box::new(body),
                         else_branch: Some(Box::new(else_body)),
                     });
                 }
@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
                 }
                 Expr::If(If {
                     condition: Box::new(cond),
-                    then: Box::new(body),
+                    then_branch: Box::new(body),
                     else_branch: None,
                 })
             }
