@@ -162,7 +162,7 @@ fn main() {
         let lexer = Lexer::new(&code);
         let mut parser = Parser::new(lexer);
         let ast = parser.parse();
-        println!("{:#?}", ast);
+        // println!("{:#?}", ast);
         let mut irgen = IRGen::new();
         let ir = irgen.compile(ast);
         println!("{:#?}", ir);

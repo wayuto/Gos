@@ -54,6 +54,7 @@ pub enum Op {
     Jump,
     JumpIfFalse,
     Label(String),
+    Extern(String),
     Nop,
 }
 

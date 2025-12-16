@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     ast::{
         ArrayAccess, ArrayAssign, BinOp, Expr, Extern, For, FuncCall, FuncDecl, Goto, If, Label,
@@ -11,11 +13,15 @@ use crate::{
 #[derive(Debug)]
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
+    functions: HashMap<String, VarType>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: Lexer<'a>) -> Self {
-        Self { lexer }
+        Self {
+            lexer,
+            functions: HashMap::new(),
+        }
     }
 
     pub fn parse(&mut self) -> Program {
@@ -213,7 +219,55 @@ impl<'a> Parser<'a> {
                 self.lexer.next_token();
                 let func = self.get_ident();
                 self.lexer.next_token();
-                Expr::Extern(Extern { func })
+                if self.lexer.curr_tok().token != TokenType::LPAREN {
+                    let mut err =
+                        GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                    err.unexpected_char(Some("("), self.lexer.curr_ch());
+                    err.panic();
+                    panic!();
+                }
+                self.lexer.next_token();
+                let mut params: Vec<VarType> = Vec::new();
+                while self.lexer.curr_tok().token != TokenType::RPAREN {
+                    match self.lexer.curr_tok().token {
+                        TokenType::Type(typ) => params.push(typ),
+                        _ => {
+                            let mut err =
+                                GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                            err.unexpected_char(Some("TYPE"), self.lexer.curr_ch());
+                            err.panic();
+                            panic!();
+                        }
+                    }
+                    self.lexer.next_token();
+                }
+                self.lexer.next_token();
+                if self.lexer.curr_tok().token != TokenType::COLON {
+                    let mut err =
+                        GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                    err.unexpected_char(Some(":"), self.lexer.curr_ch());
+                    err.panic();
+                    panic!();
+                }
+                self.lexer.next_token();
+                let ret_type: VarType;
+                match self.lexer.curr_tok().token {
+                    TokenType::Type(typ) => ret_type = typ,
+                    _ => {
+                        let mut err =
+                            GosError::new(self.lexer.curr_tok().row, self.lexer.curr_tok().col);
+                        err.unexpected_char(Some("TYPE"), self.lexer.curr_ch());
+                        err.panic();
+                        panic!();
+                    }
+                }
+                self.lexer.next_token();
+                self.functions.insert(func.clone(), ret_type.clone());
+                Expr::Extern(Extern {
+                    name: func,
+                    params,
+                    ret_type,
+                })
             }
             TokenType::IF | TokenType::WHILE | TokenType::LBRACE => self.ctrl(),
             _ => self.logical(),
@@ -571,11 +625,16 @@ impl<'a> Parser<'a> {
                     TokenType::LPAREN => {
                         self.lexer.next_token();
                         let mut args: Vec<Expr> = Vec::new();
+                        let ret_type = self.find_func_ret_type(&name);
                         while self.lexer.curr_tok().token != TokenType::RPAREN {
                             args.push(self.expr());
                         }
                         self.lexer.next_token();
-                        return Expr::FuncCall(FuncCall { name, args: args });
+                        return Expr::FuncCall(FuncCall {
+                            name,
+                            args,
+                            ret_type,
+                        });
                     }
                     TokenType::EQ => {
                         self.lexer.next_token();
@@ -713,6 +772,7 @@ impl<'a> Parser<'a> {
         }
         self.lexer.next_token();
         let body = self.stmt();
+        self.functions.insert(name.clone(), ret_type.clone());
         Expr::FuncDecl(FuncDecl {
             name,
             params,
@@ -720,5 +780,9 @@ impl<'a> Parser<'a> {
             ret_type,
             is_pub,
         })
+    }
+
+    fn find_func_ret_type(&self, name: &String) -> VarType {
+        self.functions.get(name).unwrap().clone()
     }
 }

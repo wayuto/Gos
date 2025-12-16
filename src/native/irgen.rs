@@ -1,7 +1,7 @@
-use std::{collections::HashMap, mem::take, process::exit};
+use std::{collections::HashMap, iter::zip, mem::take};
 
 use crate::{
-    ast::{Expr, FuncDecl, Program},
+    ast::{Expr, Extern, FuncDecl, Program},
     native::{IRConst, IRFunction, IRProgram, IRType, Instruction, Op, Operand},
     token::{Literal, TokenType, VarType},
 };
@@ -55,7 +55,17 @@ impl Context {
                 return symbol.ir_type.clone();
             }
         }
-        panic!("Error: Undefined variable '{}' in current scope.", name);
+        panic!("NameError: undefined variable '{}' in current scope.", name);
+    }
+
+    pub fn from_var_type(&self, var_type: &VarType) -> IRType {
+        match var_type {
+            VarType::Number => IRType::Number,
+            VarType::Bool => IRType::Bool,
+            VarType::Str => IRType::String,
+            VarType::Void => IRType::Void,
+            _ => unimplemented!(),
+        }
     }
 
     pub fn get_operand_type(&self, operand: &Operand) -> IRType {
@@ -77,7 +87,10 @@ impl Context {
     pub fn declare_var(&mut self, name: String, ir_type: IRType) {
         let current_scope = self.scope.last_mut().unwrap();
         if current_scope.contains_key(&name) {
-            panic!("Error: Variable '{}' already declared in this scope.", name);
+            panic!(
+                "NameError: variable '{}' already declared in this scope.",
+                name
+            );
         }
         current_scope.insert(name.clone(), Symbol { name, ir_type });
     }
@@ -99,13 +112,18 @@ impl IRGen {
     }
 
     pub fn compile(&mut self, program: Program) -> IRProgram {
+        let mut ctx = Context::new();
+        ctx.enter_scope();
         for expr in program.body {
             match expr {
                 Expr::FuncDecl(decl) => {
-                    self.func_decl(decl);
+                    self.func_decl(decl, &mut ctx);
                 }
                 Expr::Val(val) => {
                     self.global_constant(val.value);
+                }
+                Expr::Extern(ext) => {
+                    self.extern_decl(ext, &mut ctx);
                 }
                 _ => {}
             }
@@ -152,16 +170,7 @@ impl IRGen {
             }
             Expr::VarDecl(decl) => {
                 let value = self.compile_expr(*decl.value, ctx);
-                ctx.declare_var(
-                    decl.name.clone(),
-                    match decl.typ {
-                        VarType::Number => IRType::Number,
-                        VarType::Bool => IRType::Bool,
-                        VarType::Str => IRType::String,
-                        VarType::Void => IRType::Void,
-                        _ => unimplemented!(),
-                    },
-                );
+                ctx.declare_var(decl.name.clone(), ctx.from_var_type(&decl.typ));
                 ctx.instructions.push(Instruction {
                     op: Op::Store,
                     dst: Some(Operand::Var(decl.name)),
@@ -230,7 +239,7 @@ impl IRGen {
             }
             Expr::UnaryOp(unary) => {
                 let argument = self.compile_expr(*unary.argument, ctx);
-                let res_tmp = ctx.new_tmp(IRType::Number);
+                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&argument));
                 ctx.instructions.push(Instruction {
                     op: match unary.operator {
                         TokenType::NEG => Op::Neg,
@@ -272,10 +281,8 @@ impl IRGen {
                         src1: Some(value_op),
                         src2: None,
                     });
-                    ctx.new_tmp(IRType::Void)
-                } else {
-                    ctx.new_tmp(IRType::Void)
                 }
+                ctx.new_tmp(IRType::Void)
             }
             Expr::If(i) => {
                 let label_else = ctx.new_label("else");
@@ -324,10 +331,117 @@ impl IRGen {
                     src1: None,
                     src2: None,
                 });
-                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&then_branch));
+                ctx.new_tmp(ctx.get_operand_type(&then_branch))
+            }
+            Expr::While(w) => {
+                let label_start = ctx.new_label("while_start");
+                let label_end = ctx.new_label("while_end");
+                let cond = self.compile_expr(*w.condition, ctx);
+                ctx.instructions.push(Instruction {
+                    op: Op::JumpIfFalse,
+                    dst: None,
+                    src1: Some(cond),
+                    src2: Some(Operand::Label(label_end.clone())),
+                });
+                ctx.instructions.push(Instruction {
+                    op: Op::Label(label_start.clone()),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+                if !matches!(*w.body, Expr::Stmt(_)) {
+                    ctx.enter_scope();
+                }
+                let while_body = self.compile_expr(*w.body.clone(), ctx);
+                if !matches!(*w.body, Expr::Stmt(_)) {
+                    ctx.exit_scope();
+                }
+                ctx.instructions.push(Instruction {
+                    op: Op::Jump,
+                    dst: None,
+                    src1: Some(Operand::Label(label_start)),
+                    src2: None,
+                });
+                ctx.instructions.push(Instruction {
+                    op: Op::Label(label_end.clone()),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+                ctx.new_tmp(IRType::Void)
+            }
+            Expr::For(f) => {
+                unimplemented!()
+            }
+            Expr::FuncDecl(_) => {
+                panic!("SyntaxError: cannot declare a function in a function");
+            }
+            Expr::FuncCall(call) => {
+                let func = self.find_func(&call.name);
+                if call.args.len().clone() != func.params.len().clone() {
+                    panic!(
+                        "TypeError: expected {} arguments, got {}",
+                        call.args.len().clone(),
+                        func.params.len().clone()
+                    );
+                }
+                let res_tmp = ctx.new_tmp(ctx.from_var_type(&call.ret_type));
+                for (arg, param) in zip(call.args, func.params) {
+                    let operand = self.compile_expr(arg, ctx);
+                    if ctx.get_operand_type(&operand) != param.1 {
+                        panic!(
+                            "TypeError: unexpected type: {:?}",
+                            ctx.get_operand_type(&operand)
+                        );
+                    }
+                    ctx.instructions.push(Instruction {
+                        op: Op::Store,
+                        dst: Some(param.0),
+                        src1: Some(operand),
+                        src2: None,
+                    });
+                }
+                ctx.instructions.push(Instruction {
+                    op: Op::Call,
+                    dst: Some(res_tmp.clone()),
+                    src1: Some(Operand::Function(call.name)),
+                    src2: None,
+                });
                 res_tmp
             }
-            _ => unimplemented!("{:?}", expr),
+            Expr::ArrayAccess(aa) => {
+                unimplemented!();
+            }
+            Expr::ArrayAssign(aa) => {
+                unimplemented!();
+            }
+            Expr::Extern(ext) => {
+                ctx.instructions.push(Instruction {
+                    op: Op::Extern(ext.name),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+                ctx.new_tmp(IRType::Void)
+            }
+            Expr::Goto(goto) => {
+                ctx.instructions.push(Instruction {
+                    op: Op::Jump,
+                    dst: None,
+                    src1: Some(Operand::Label(goto.label)),
+                    src2: None,
+                });
+                ctx.new_tmp(IRType::Void)
+            }
+            Expr::Label(label) => {
+                ctx.instructions.push(Instruction {
+                    op: Op::Label(label.name),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+                ctx.new_tmp(IRType::Void)
+            }
         }
     }
 
@@ -340,29 +454,20 @@ impl IRGen {
         }
     }
 
-    fn func_decl(&mut self, decl: FuncDecl) -> () {
+    fn func_decl(&mut self, decl: FuncDecl, ctx: &mut Context) -> () {
         let name = decl.name.clone();
-        let mut ctx = Context::new();
         ctx.enter_scope();
         let params: Vec<(Operand, IRType)> = decl
             .params
             .into_iter()
             .map(|(param, typ)| {
-                (
-                    Operand::Var(param),
-                    match typ {
-                        VarType::Number => IRType::Number,
-                        VarType::Bool => IRType::Bool,
-                        VarType::Str => IRType::String,
-                        VarType::Void => IRType::Void,
-                        _ => unimplemented!(),
-                    },
-                )
+                ctx.declare_var(param.clone(), ctx.from_var_type(&typ));
+                (Operand::Var(param), ctx.from_var_type(&typ))
             })
             .collect();
 
         let body = *decl.body;
-        let last_op = self.compile_expr(body, &mut ctx);
+        let last_op = self.compile_expr(body, ctx);
         ctx.exit_scope();
 
         if ctx.instructions.last().map(|i| i.op.clone()) != Some(Op::Return) {
@@ -377,9 +482,41 @@ impl IRGen {
         self.functions.push(IRFunction {
             name: name,
             params,
-            ret_type: IRType::Number,
-            instructions: ctx.instructions,
+            ret_type: ctx.from_var_type(&decl.ret_type),
+            instructions: ctx.instructions.clone(),
             is_pub: decl.is_pub,
         });
+    }
+
+    fn extern_decl(&mut self, decl: Extern, ctx: &mut Context) -> () {
+        let name = decl.name.clone();
+        let mut cnt = 0;
+        let params: Vec<(Operand, IRType)> = decl
+            .params
+            .into_iter()
+            .map(|(typ)| {
+                let param = format!("arg{}", cnt);
+                cnt += 1;
+                ctx.declare_var(param.clone(), ctx.from_var_type(&typ));
+                (Operand::Var(param), ctx.from_var_type(&typ))
+            })
+            .collect();
+
+        self.functions.push(IRFunction {
+            name: name,
+            params,
+            ret_type: ctx.from_var_type(&decl.ret_type),
+            instructions: ctx.instructions.clone(),
+            is_pub: false,
+        });
+    }
+
+    fn find_func(&self, name: &String) -> IRFunction {
+        for func in self.functions.iter().rev() {
+            if func.name == *name {
+                return func.to_owned();
+            }
+        }
+        panic!("NameError: undefined function '{}' in current scope", name);
     }
 }

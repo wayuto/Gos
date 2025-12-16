@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::token::{Literal, TokenType, VarType};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -104,6 +102,7 @@ pub struct FuncDecl {
 pub struct FuncCall {
     pub name: String,
     pub args: Vec<Expr>,
+    pub ret_type: VarType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -136,5 +135,7 @@ pub struct ArrayAssign {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Extern {
-    pub func: String,
+    pub name: String,
+    pub params: Vec<VarType>,
+    pub ret_type: VarType,
 }

@@ -1,4 +1,6 @@
+extern f(num): num
+
 pub fun main(): num {
-    let x: num = 0
+    let x: num = f(1)
     return x
 }
