@@ -73,6 +73,7 @@ pub struct IRFunction {
     pub instructions: Vec<Instruction>,
     pub ret_type: IRType,
     pub is_pub: bool,
+    pub is_external: bool,
 }
 
 #[derive(Debug, Clone)]

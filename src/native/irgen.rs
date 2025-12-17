@@ -112,18 +112,16 @@ impl IRGen {
     }
 
     pub fn compile(&mut self, program: Program) -> IRProgram {
-        let mut ctx = Context::new();
-        ctx.enter_scope();
         for expr in program.body {
             match expr {
                 Expr::FuncDecl(decl) => {
-                    self.func_decl(decl, &mut ctx);
+                    self.func_decl(decl);
                 }
                 Expr::Val(val) => {
                     self.global_constant(val.value);
                 }
                 Expr::Extern(ext) => {
-                    self.extern_decl(ext, &mut ctx);
+                    self.extern_decl(ext);
                 }
                 _ => {}
             }
@@ -287,28 +285,41 @@ impl IRGen {
             Expr::If(i) => {
                 let label_else = ctx.new_label("else");
                 let label_end = ctx.new_label("endif");
+
                 let cond = self.compile_expr(*i.condition, ctx);
+
+                let then_op = self.compile_expr(*i.then_branch.clone(), ctx);
+
+                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&then_op));
+
                 ctx.instructions.push(Instruction {
                     op: Op::JumpIfFalse,
                     dst: None,
                     src1: Some(cond),
                     src2: Some(Operand::Label(label_else.clone())),
                 });
+
                 if !matches!(*i.then_branch, Expr::Stmt(_)) {
                     ctx.enter_scope();
                 }
-                let then_branch = self.compile_expr(*i.then_branch.clone(), ctx);
+
+                ctx.instructions.push(Instruction {
+                    op: Op::Move,
+                    dst: Some(res_tmp.clone()),
+                    src1: Some(then_op),
+                    src2: None,
+                });
+
                 if !matches!(*i.then_branch, Expr::Stmt(_)) {
                     ctx.exit_scope();
                 }
-                if i.else_branch.is_some() {
-                    ctx.instructions.push(Instruction {
-                        op: Op::Jump,
-                        dst: None,
-                        src1: Some(Operand::Label(label_end.clone())),
-                        src2: None,
-                    });
-                }
+
+                ctx.instructions.push(Instruction {
+                    op: Op::Jump,
+                    dst: None,
+                    src1: Some(Operand::Label(label_end.clone())),
+                    src2: None,
+                });
 
                 ctx.instructions.push(Instruction {
                     op: Op::Label(label_else),
@@ -316,22 +327,46 @@ impl IRGen {
                     src1: None,
                     src2: None,
                 });
+
                 if let Some(else_expr) = i.else_branch {
                     if !matches!(*else_expr, Expr::Stmt(_)) {
                         ctx.enter_scope();
                     }
-                    self.compile_expr(*else_expr.clone(), ctx);
+
+                    let else_op = self.compile_expr(*else_expr.clone(), ctx);
+
+                    let then_type = ctx.get_operand_type(&res_tmp);
+                    let else_type = ctx.get_operand_type(&else_op);
+
+                    if then_type != else_type {
+                        panic!(
+                            "TypeError: If-Else expression branches must have the same return type: {:?} vs {:?}",
+                            then_type, else_type
+                        );
+                    }
+
+                    ctx.instructions.push(Instruction {
+                        op: Op::Move,
+                        dst: Some(res_tmp.clone()),
+                        src1: Some(else_op),
+                        src2: None,
+                    });
+
                     if !matches!(*else_expr, Expr::Stmt(_)) {
                         ctx.exit_scope();
                     }
+                } else {
+                    panic!("SyntaxError: If expression must have an else branch.");
                 }
+
                 ctx.instructions.push(Instruction {
                     op: Op::Label(label_end),
                     dst: None,
                     src1: None,
                     src2: None,
                 });
-                ctx.new_tmp(ctx.get_operand_type(&then_branch))
+
+                res_tmp
             }
             Expr::While(w) => {
                 let label_start = ctx.new_label("while_start");
@@ -378,25 +413,26 @@ impl IRGen {
             }
             Expr::FuncCall(call) => {
                 let func = self.find_func(&call.name);
-                if call.args.len().clone() != func.params.len().clone() {
+                if call.args.len() != func.params.len() {
                     panic!(
                         "TypeError: expected {} arguments, got {}",
-                        call.args.len().clone(),
-                        func.params.len().clone()
+                        call.args.len(),
+                        func.params.len()
                     );
                 }
                 let res_tmp = ctx.new_tmp(ctx.from_var_type(&call.ret_type));
-                for (arg, param) in zip(call.args, func.params) {
-                    let operand = self.compile_expr(arg, ctx);
+                for (arg, param) in zip(call.args.iter(), func.params.iter()) {
+                    let operand = self.compile_expr(arg.clone(), ctx);
                     if ctx.get_operand_type(&operand) != param.1 {
                         panic!(
-                            "TypeError: unexpected type: {:?}",
-                            ctx.get_operand_type(&operand)
+                            "TypeError: unexpected type {:?}, expected {:?}",
+                            ctx.get_operand_type(&operand),
+                            param.1
                         );
                     }
                     ctx.instructions.push(Instruction {
-                        op: Op::Store,
-                        dst: Some(param.0),
+                        op: Op::Arg,
+                        dst: None,
                         src1: Some(operand),
                         src2: None,
                     });
@@ -416,13 +452,7 @@ impl IRGen {
                 unimplemented!();
             }
             Expr::Extern(ext) => {
-                ctx.instructions.push(Instruction {
-                    op: Op::Extern(ext.name),
-                    dst: None,
-                    src1: None,
-                    src2: None,
-                });
-                ctx.new_tmp(IRType::Void)
+                panic!("SyntaxError: cannot extern a function in a function");
             }
             Expr::Goto(goto) => {
                 ctx.instructions.push(Instruction {
@@ -454,8 +484,9 @@ impl IRGen {
         }
     }
 
-    fn func_decl(&mut self, decl: FuncDecl, ctx: &mut Context) -> () {
-        let name = decl.name.clone();
+    fn func_decl(&mut self, decl: FuncDecl) -> () {
+        let name = decl.name;
+        let mut ctx = Context::new();
         ctx.enter_scope();
         let params: Vec<(Operand, IRType)> = decl
             .params
@@ -467,7 +498,7 @@ impl IRGen {
             .collect();
 
         let body = *decl.body;
-        let last_op = self.compile_expr(body, ctx);
+        let last_op = self.compile_expr(body, &mut ctx);
         ctx.exit_scope();
 
         if ctx.instructions.last().map(|i| i.op.clone()) != Some(Op::Return) {
@@ -483,32 +514,36 @@ impl IRGen {
             name: name,
             params,
             ret_type: ctx.from_var_type(&decl.ret_type),
-            instructions: ctx.instructions.clone(),
+            instructions: take(&mut ctx.instructions),
             is_pub: decl.is_pub,
+            is_external: false,
         });
     }
 
-    fn extern_decl(&mut self, decl: Extern, ctx: &mut Context) -> () {
-        let name = decl.name.clone();
-        let mut cnt = 0;
-        let params: Vec<(Operand, IRType)> = decl
+    fn extern_decl(&mut self, ext: Extern) -> () {
+        let name = ext.name;
+        let params: Vec<(Operand, IRType)> = ext
             .params
             .into_iter()
-            .map(|(typ)| {
-                let param = format!("arg{}", cnt);
-                cnt += 1;
-                ctx.declare_var(param.clone(), ctx.from_var_type(&typ));
-                (Operand::Var(param), ctx.from_var_type(&typ))
+            .enumerate()
+            .map(|(i, typ)| {
+                let temp_ctx = Context::new();
+                let param_name = format!("a{}", i);
+                (Operand::Var(param_name), temp_ctx.from_var_type(&typ))
             })
             .collect();
 
-        self.functions.push(IRFunction {
-            name: name,
+        let ret_type = Context::new().from_var_type(&ext.ret_type);
+
+        let signature = IRFunction {
+            name: name.clone(),
             params,
-            ret_type: ctx.from_var_type(&decl.ret_type),
-            instructions: ctx.instructions.clone(),
+            ret_type,
+            instructions: Vec::new(),
             is_pub: false,
-        });
+            is_external: true,
+        };
+        self.functions.push(signature);
     }
 
     fn find_func(&self, name: &String) -> IRFunction {
