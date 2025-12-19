@@ -99,7 +99,66 @@ fn compile_native(file: &String, typ: &str, no_std: bool) -> () {
     let ast = parser.parse();
     let mut irgen = IRGen::new();
     let ir = irgen.compile(ast);
-    println!("{:?}", ir);
+    let mut codegen = CodeGen::new(ir);
+    let assembly = codegen.compile();
+
+    let stem = if let Some(idx) = file.rfind('.') {
+        &file[..idx]
+    } else {
+        file.as_str()
+    };
+    let asm_file = format!("{}.s", stem);
+    let obj_file = format!("{}.o", stem);
+    let bin_file = stem.to_string();
+
+    match typ {
+        "asm" => {
+            fs::write(&asm_file, &assembly).unwrap();
+        }
+        "obj" => {
+            fs::write(&asm_file, &assembly).unwrap();
+            let nasm_status = std::process::Command::new("nasm")
+                .args(&["-f", "elf64", "-o", &obj_file, &asm_file])
+                .status()
+                .expect("Failed to run nasm");
+            if !nasm_status.success() {
+                let _ = fs::remove_file(&asm_file);
+                println!("nasm failed");
+                std::process::exit(1);
+            }
+            let _ = fs::remove_file(&asm_file);
+        }
+        "bin" => {
+            fs::write(&asm_file, &assembly).unwrap();
+            let nasm_status = std::process::Command::new("nasm")
+                .args(&["-f", "elf64", "-o", &obj_file, &asm_file])
+                .status()
+                .expect("Failed to run nasm");
+            if !nasm_status.success() {
+                println!("nasm failed");
+                std::process::exit(1);
+            }
+
+            let mut ld_args = vec!["-o", &bin_file, &obj_file];
+            if !no_std {
+                ld_args.push("/usr/local/lib/libgos.a");
+            }
+            let ld_status = std::process::Command::new("ld")
+                .args(&ld_args)
+                .status()
+                .expect("Failed to run ld");
+            if !ld_status.success() {
+                let _ = fs::remove_file(&asm_file);
+                let _ = fs::remove_file(&obj_file);
+                println!("ld failed");
+                std::process::exit(1);
+            }
+
+            let _ = fs::remove_file(&asm_file);
+            let _ = fs::remove_file(&obj_file);
+        }
+        _ => {}
+    }
 }
 
 fn main() {

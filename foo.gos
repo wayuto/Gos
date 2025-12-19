@@ -1,4 +1,4 @@
-extern itoa(num): void
+extern itoa(num): str
 extern println(str): void
 
 fun f(n: num): num {
@@ -7,7 +7,6 @@ fun f(n: num): num {
 }
 
 pub fun main(): num {
-    let n: str = itoa(f(30))
-    println(n)
+    println(itoa(f(30)))
     return 0
 }

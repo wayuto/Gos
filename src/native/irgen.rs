@@ -38,7 +38,7 @@ impl Context {
 
     pub fn new_label(&mut self, name: &str) -> String {
         self.label_cnt += 1;
-        format!("{}_{:X}", name, self.label_cnt - 1)
+        format!(".{}_{:X}", name, self.label_cnt - 1)
     }
 
     pub fn enter_scope(&mut self) {
@@ -283,14 +283,13 @@ impl IRGen {
                 ctx.exit_scope();
                 result_operand
             }
-            Expr::Return(ret) => {
-                if let Some(value) = ret.value {
-                    let value_op = self.compile_expr(*value, ctx);
-
+            Expr::Return(ret_expr) => {
+                if let Some(val) = ret_expr.value {
+                    let res_op = self.compile_expr(*val, ctx);
                     ctx.instructions.push(Instruction {
                         op: Op::Return,
                         dst: None,
-                        src1: Some(value_op),
+                        src1: Some(res_op),
                         src2: None,
                     });
                 }
@@ -302,10 +301,6 @@ impl IRGen {
 
                 let cond = self.compile_expr(*i.condition, ctx);
 
-                let then_op = self.compile_expr(*i.then_branch.clone(), ctx);
-
-                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&then_op));
-
                 ctx.instructions.push(Instruction {
                     op: Op::JumpIfFalse,
                     dst: None,
@@ -313,9 +308,12 @@ impl IRGen {
                     src2: Some(Operand::Label(label_else.clone())),
                 });
 
+                let res_tmp = ctx.new_tmp(IRType::Void);
+
                 if !matches!(*i.then_branch, Expr::Stmt(_)) {
                     ctx.enter_scope();
                 }
+                let then_op = self.compile_expr(*i.then_branch.clone(), ctx);
 
                 ctx.instructions.push(Instruction {
                     op: Op::Move,
@@ -323,7 +321,6 @@ impl IRGen {
                     src1: Some(then_op),
                     src2: None,
                 });
-
                 if !matches!(*i.then_branch, Expr::Stmt(_)) {
                     ctx.exit_scope();
                 }
@@ -346,18 +343,7 @@ impl IRGen {
                     if !matches!(*else_expr, Expr::Stmt(_)) {
                         ctx.enter_scope();
                     }
-
-                    let else_op = self.compile_expr(*else_expr.clone(), ctx);
-
-                    let then_type = ctx.get_operand_type(&res_tmp);
-                    let else_type = ctx.get_operand_type(&else_op);
-
-                    if then_type != else_type {
-                        panic!(
-                            "TypeError: If-Else expression branches must have the same return type: {:?} vs {:?}",
-                            then_type, else_type
-                        );
-                    }
+                    let else_op = self.compile_expr(*else_expr.to_owned(), ctx);
 
                     ctx.instructions.push(Instruction {
                         op: Op::Move,
@@ -365,8 +351,7 @@ impl IRGen {
                         src1: Some(else_op),
                         src2: None,
                     });
-
-                    if !matches!(*else_expr, Expr::Stmt(_)) {
+                    if !matches!(*else_expr.clone(), Expr::Stmt(_)) {
                         ctx.exit_scope();
                     }
                 }

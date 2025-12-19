@@ -3,10 +3,10 @@ use std::{collections::HashMap, mem::take};
 use crate::native::{IRConst, IRFunction, IRProgram, Instruction, Op, Operand};
 
 macro_rules! assemble {
-        ($buf:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {
-            $buf.push_str(&format!(concat!("\n", $fmt) $(, $arg)*))
-        };
-}
+            ($buf:expr, $fmt:literal $(, $arg:expr)* $(,)?) => {
+                $buf.push_str(&format!(concat!("\n", $fmt) $(, $arg)*))
+            };
+    }
 
 pub struct CodeGen {
     program: IRProgram,
@@ -93,15 +93,15 @@ impl CodeGen {
 
                 assemble!(self.text, "cmp rax, rbx");
                 match code.op {
-                    Op::Eq => assemble!(self.text, "sete al"),
+                    Op::Eq => assemble!(self.text, "sete  al"),
                     Op::Ne => assemble!(self.text, "setne al"),
-                    Op::Gt => assemble!(self.text, "setg al"),
+                    Op::Gt => assemble!(self.text, "setg  al"),
                     Op::Ge => assemble!(self.text, "setge al"),
-                    Op::Gt => assemble!(self.text, "setl al"),
-                    Op::Ge => assemble!(self.text, "setle al"),
-                    _ => {}
+                    Op::Lt => assemble!(self.text, "setl  al"),
+                    Op::Le => assemble!(self.text, "setle al"),
+                    _ => unreachable!(),
                 }
-                assemble!(self.text, "movzx rax, al");
+                assemble!(self.text, "movzx eax, al");
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
             }
             Op::Arg(n) => {
@@ -109,7 +109,7 @@ impl CodeGen {
                 let offset = self.get_offset(op);
 
                 if n < 6 {
-                    assemble!(self.text, "mov {}, [rbp - {}]", self.arg_reg[0], offset);
+                    assemble!(self.text, "mov {}, [rbp - {}]", self.arg_reg[n], offset);
                     return;
                 }
                 assemble!(self.text, "mov rax, [rbp - {}]", offset);
@@ -160,7 +160,7 @@ impl CodeGen {
         }
     }
 
-    fn compile_fn(&mut self, func: IRFunction) -> () {
+    fn compile_fn(&mut self, func: IRFunction) {
         if func.is_external {
             assemble!(self.text, "extern {}", func.name);
             return;
@@ -169,7 +169,7 @@ impl CodeGen {
         self.vars.clear();
         let mut offset = 0;
 
-        for (param, _typ) in &func.params {
+        for (param, _) in &func.params {
             if let Operand::Var(name) = param {
                 if !self.vars.contains_key(name) {
                     offset += 8;
@@ -179,22 +179,31 @@ impl CodeGen {
         }
 
         for inst in &func.instructions {
-            let ops = [&inst.dst, &inst.src1, &inst.src2];
-            for op_opt in ops {
-                if let Some(Operand::Temp(id, _)) = op_opt {
-                    let temp_name = format!("_tmp_{}", id);
-                    if !self.vars.contains_key(&temp_name) {
-                        offset += 8;
-                        self.vars.insert(temp_name, offset);
-                    }
-                } else if let Some(Operand::Var(name)) = op_opt {
-                    if !self.vars.contains_key(name) {
-                        offset += 8;
-                        self.vars.insert(name.clone(), offset);
+            let mut register_op = |op_opt: &Option<Operand>| {
+                if let Some(op) = op_opt {
+                    match op {
+                        Operand::Var(name) => {
+                            if !self.vars.contains_key(name) {
+                                offset += 8;
+                                self.vars.insert(name.clone(), offset);
+                            }
+                        }
+                        Operand::Temp(id, _) => {
+                            let temp_key = format!("_tmp_{}", id);
+                            if !self.vars.contains_key(&temp_key) {
+                                offset += 8;
+                                self.vars.insert(temp_key, offset);
+                            }
+                        }
+                        _ => {}
                     }
                 }
-            }
+            };
+            register_op(&inst.dst);
+            register_op(&inst.src1);
+            register_op(&inst.src2);
         }
+
         let stack_size = (offset + 15) & !15;
 
         if func.is_pub {
@@ -206,15 +215,36 @@ impl CodeGen {
         if stack_size > 0 {
             assemble!(self.text, "sub rsp, {}", stack_size);
         }
+
         for (i, (param, _)) in func.params.iter().enumerate() {
             if i < 6 {
-                let offset = self.get_offset(param);
-                assemble!(self.text, "mov [rbp - {}], {}", offset, self.arg_reg[i]);
+                let off = self.get_offset(param);
+                assemble!(self.text, "mov [rbp - {}], {}", off, self.arg_reg[i]);
             }
         }
+
+        let ret_label = format!(".L_{}_exit", func.name);
+
         for code in func.instructions {
-            self.compile_code(code);
+            match code.op {
+                Op::Return => {
+                    if let Some(ref val) = code.src1 {
+                        self.load(val, "rax");
+                    }
+                    assemble!(self.text, "jmp {}", ret_label);
+                }
+                Op::Label(ref name) => {
+                    assemble!(self.text, "{}:", name);
+                }
+                _ => {
+                    self.compile_code(code);
+                }
+            }
         }
+
+        assemble!(self.text, "{}:", ret_label);
+        assemble!(self.text, "leave");
+        assemble!(self.text, "ret");
     }
 
     fn load(&mut self, op: &Operand, reg: &str) -> () {
