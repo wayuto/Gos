@@ -7,6 +7,10 @@ fun f(n: num): num {
 }
 
 pub fun main(): num {
-    println(itoa(f(30)))
+    println(
+        itoa(
+            f(30)
+        )
+    )
     return 0
 }
