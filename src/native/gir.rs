@@ -49,7 +49,7 @@ pub enum Op {
     Load,
     Store,
     Call,
-    Arg,
+    Arg(usize),
     Return,
     Jump,
     JumpIfFalse,

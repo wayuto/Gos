@@ -112,20 +112,30 @@ impl IRGen {
     }
 
     pub fn compile(&mut self, program: Program) -> IRProgram {
-        for expr in program.body {
+        for expr in &program.body {
             match expr {
                 Expr::FuncDecl(decl) => {
-                    self.func_decl(decl);
-                }
-                Expr::Val(val) => {
-                    self.global_constant(val.value);
+                    self.func_decl(decl.clone());
                 }
                 Expr::Extern(ext) => {
-                    self.extern_decl(ext);
+                    self.extern_decl(ext.clone());
                 }
                 _ => {}
             }
         }
+
+        for expr in program.body {
+            match expr {
+                Expr::FuncDecl(decl) => {
+                    self.compile_fn(decl);
+                }
+                Expr::Val(val) => {
+                    self.global_constant(val.value);
+                }
+                _ => {}
+            }
+        }
+
         IRProgram {
             functions: take(&mut self.functions),
             constants: take(&mut self.constants),
@@ -206,8 +216,12 @@ impl IRGen {
                 let left = self.compile_expr(*bin.left, ctx);
                 let right = self.compile_expr(*bin.right, ctx);
                 let typ = ctx.get_operand_type(&left);
-                if typ != ctx.get_operand_type(&left) {
-                    panic!("")
+                if typ != ctx.get_operand_type(&right) {
+                    panic!(
+                        "TypeError: unsupported operation for '{:?}' and '{:?}'",
+                        typ,
+                        ctx.get_operand_type(&right)
+                    )
                 }
                 let res_tmp = ctx.new_tmp(typ);
                 ctx.instructions.push(Instruction {
@@ -355,8 +369,6 @@ impl IRGen {
                     if !matches!(*else_expr, Expr::Stmt(_)) {
                         ctx.exit_scope();
                     }
-                } else {
-                    panic!("SyntaxError: If expression must have an else branch.");
                 }
 
                 ctx.instructions.push(Instruction {
@@ -421,6 +433,7 @@ impl IRGen {
                     );
                 }
                 let res_tmp = ctx.new_tmp(ctx.from_var_type(&call.ret_type));
+                let mut n = 0;
                 for (arg, param) in zip(call.args.iter(), func.params.iter()) {
                     let operand = self.compile_expr(arg.clone(), ctx);
                     if ctx.get_operand_type(&operand) != param.1 {
@@ -431,11 +444,12 @@ impl IRGen {
                         );
                     }
                     ctx.instructions.push(Instruction {
-                        op: Op::Arg,
+                        op: Op::Arg(n),
                         dst: None,
                         src1: Some(operand),
                         src2: None,
                     });
+                    n += 1;
                 }
                 ctx.instructions.push(Instruction {
                     op: Op::Call,
@@ -484,18 +498,40 @@ impl IRGen {
         }
     }
 
-    fn func_decl(&mut self, decl: FuncDecl) -> () {
-        let name = decl.name;
-        let mut ctx = Context::new();
-        ctx.enter_scope();
+    fn func_decl(&mut self, decl: FuncDecl) {
+        let mut temp_ctx = Context::new();
         let params: Vec<(Operand, IRType)> = decl
             .params
-            .into_iter()
-            .map(|(param, typ)| {
-                ctx.declare_var(param.clone(), ctx.from_var_type(&typ));
-                (Operand::Var(param), ctx.from_var_type(&typ))
-            })
+            .iter()
+            .enumerate()
+            .map(|(i, (name, typ))| (Operand::Var(name.clone()), temp_ctx.from_var_type(typ)))
             .collect();
+
+        let ret_type = temp_ctx.from_var_type(&decl.ret_type);
+
+        self.functions.push(IRFunction {
+            name: decl.name.clone(),
+            params,
+            ret_type,
+            instructions: Vec::new(),
+            is_pub: decl.is_pub,
+            is_external: false,
+        });
+    }
+
+    fn compile_fn(&mut self, decl: FuncDecl) {
+        let name = decl.name.clone();
+        let mut ctx = Context::new();
+        ctx.enter_scope();
+
+        let func = self.find_func(&name).clone();
+        let params = func.params.clone();
+
+        for (op, typ) in &params {
+            if let Operand::Var(name) = op {
+                ctx.declare_var(name.clone(), typ.clone());
+            }
+        }
 
         let body = *decl.body;
         let last_op = self.compile_expr(body, &mut ctx);
@@ -510,14 +546,9 @@ impl IRGen {
             });
         }
 
-        self.functions.push(IRFunction {
-            name: name,
-            params,
-            ret_type: ctx.from_var_type(&decl.ret_type),
-            instructions: take(&mut ctx.instructions),
-            is_pub: decl.is_pub,
-            is_external: false,
-        });
+        if let Some(func) = self.functions.iter_mut().find(|f| f.name == name) {
+            func.instructions = take(&mut ctx.instructions);
+        }
     }
 
     fn extern_decl(&mut self, ext: Extern) -> () {

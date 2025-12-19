@@ -1,6 +1,13 @@
-extern f(num): num
+extern itoa(num): void
+extern println(str): void
+
+fun f(n: num): num {
+    if n < 2 return n
+    return f(n - 1) + f(n - 2)
+}
 
 pub fun main(): num {
-    let x: num = f(1)
-    return x
+    let n: str = itoa(f(30))
+    println(n)
+    return 0
 }

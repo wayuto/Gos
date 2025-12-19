@@ -1,6 +1,10 @@
 #![allow(warnings)]
 use crate::{
-    bytecode::GVM, lexer::Lexer, native::IRGen, parser::Parser, preprocessor::Preprocessor,
+    bytecode::GVM,
+    lexer::Lexer,
+    native::{CodeGen, IRGen},
+    parser::Parser,
+    preprocessor::Preprocessor,
 };
 use clap::{Arg, ArgAction, Command};
 use std::{fs, path::Path};
@@ -165,7 +169,10 @@ fn main() {
         // println!("{:#?}", ast);
         let mut irgen = IRGen::new();
         let ir = irgen.compile(ast);
-        println!("{:#?}", ir);
+        // println!("{:#?}", ir);
+        let mut compiler = CodeGen::new(ir);
+        let asm = compiler.compile();
+        println!("{}", asm);
     }
 
     let matches = cmd.get_matches();

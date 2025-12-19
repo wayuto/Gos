@@ -166,7 +166,6 @@ impl<'a> Parser<'a> {
                 self.lexer.next_token();
                 let name = self.get_ident();
                 self.lexer.next_token();
-                self.lexer.next_token();
                 Expr::Goto(Goto { label: name })
             }
             TokenType::VARDECL => {
@@ -770,9 +769,9 @@ impl<'a> Parser<'a> {
             err.panic();
             panic!();
         }
-        self.lexer.next_token();
-        let body = self.stmt();
         self.functions.insert(name.clone(), ret_type.clone());
+        self.lexer.next_token();
+        let body = self.expr();
         Expr::FuncDecl(FuncDecl {
             name,
             params,
@@ -783,6 +782,10 @@ impl<'a> Parser<'a> {
     }
 
     fn find_func_ret_type(&self, name: &String) -> VarType {
-        self.functions.get(name).unwrap().clone()
+        return self
+            .functions
+            .get(name)
+            .expect(format!("undefined functions: '{}'", name).as_str())
+            .to_owned();
     }
 }
