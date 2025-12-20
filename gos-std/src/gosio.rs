@@ -26,36 +26,6 @@ pub extern "C" fn println(fmt: *const u8) -> isize {
     write(1, fmt, len) + write(1, b"\n".as_ptr(), 1)
 }
 
-#[inline(never)]
-#[unsafe(no_mangle)]
-pub extern "C" fn printf(args: *const *const u8) -> isize {
-    if args.is_null() {
-        return write(1, b"\n".as_ptr(), 1);
-    }
-
-    let mut ret: isize = 0;
-    let mut i = 0;
-
-    loop {
-        unsafe {
-            let current_string_ptr = *args.add(i);
-
-            if current_string_ptr.is_null() {
-                break;
-            }
-
-            let result = print(current_string_ptr);
-
-            if result < 0 {
-                return result;
-            }
-            ret += result;
-            i += 1;
-        }
-    }
-    ret
-}
-
 static mut BUFFER: [u8; 64] = [0; 64];
 
 #[inline(never)]

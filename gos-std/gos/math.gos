@@ -1,6 +1,6 @@
-extern abs
-extern sqrt
-extern max
-extern min
-extern pow
-extern fact
+extern abs(num): num
+extern sqrt(num): num
+extern max(num num): num
+extern min(num num): num
+extern pow(num num): num
+extern fact(num): num

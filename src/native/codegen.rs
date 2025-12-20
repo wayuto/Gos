@@ -66,7 +66,7 @@ impl CodeGen {
                 self.load(&code.src1.unwrap(), "rax");
                 assemble!(self.text, "mov [rbp - {}], rax", offset);
             }
-            Op::Add | Op::Sub | Op::Mul | Op::Div => {
+            Op::Add | Op::Sub | Op::Mul | Op::Div | Op::LAnd | Op::LOr | Op::Xor => {
                 let dst = code.dst.as_ref().unwrap();
                 let src1 = code.src1.as_ref().unwrap();
                 let src2 = code.src2.as_ref().unwrap();
@@ -81,6 +81,9 @@ impl CodeGen {
                         assemble!(self.text, "cqo");
                         assemble!(self.text, "idiv rbx")
                     }
+                    Op::LAnd => assemble!(self.text, "and rax, rbx"),
+                    Op::LOr => assemble!(self.text, "or rax, rbx"),
+                    Op::Xor => assemble!(self.text, "xor rax, rbx"),
                     _ => panic!(),
                 }
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
@@ -104,6 +107,40 @@ impl CodeGen {
                     _ => unreachable!(),
                 }
                 assemble!(self.text, "movzx eax, al");
+                assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+            }
+            Op::Neg | Op::Inc | Op::Dec | Op::SizeOf => {
+                let dst = code.dst.as_ref().unwrap();
+                let src1 = code.src1.as_ref().unwrap();
+
+                self.load(src1, "rax");
+
+                match code.op {
+                    Op::Neg => {
+                        assemble!(self.text, "neg rax");
+                    }
+                    Op::Inc => {
+                        assemble!(self.text, "inc rax");
+                    }
+                    Op::Dec => {
+                        assemble!(self.text, "dec rax");
+                    }
+                    Op::SizeOf => {
+                        assemble!(self.text, "mov rax, [rax]");
+                    }
+                    _ => unreachable!(),
+                }
+
+                assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+            }
+            Op::Range => {
+                let dst = code.dst.as_ref().unwrap();
+                let src1 = code.src1.as_ref().unwrap();
+                let src2 = code.src2.as_ref().unwrap();
+
+                self.load(src1, "rdi");
+                self.load(src2, "rsi");
+                assemble!(self.text, "call range");
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
             }
             Op::Arg(n) => {
@@ -293,24 +330,8 @@ impl CodeGen {
                         let s_lbl = self.alloc_str(s);
                         assemble!(self.text, "mov {}, {}", reg, s_lbl);
                     }
-                    IRConst::Array(len, arr) => {
-                        let data_size = len * 8;
-                        let total_block_size = data_size + 8;
-                        let padding = (16 - (total_block_size % 16)) % 16;
-                        let padded_block_size = total_block_size + padding;
-
-                        assemble!(self.text, "sub rsp, {}", padded_block_size);
-                        assemble!(self.text, "mov r10, rsp");
-
-                        assemble!(self.text, "mov rax, {}", len);
-                        assemble!(self.text, "mov [r10], rax");
-
-                        for (i, op) in arr.iter().enumerate() {
-                            self.load(op, "rax");
-                            assemble!(self.text, "mov [r10 + {}], rax", 8 + i * 8);
-                        }
-
-                        assemble!(self.text, "mov {}, r10", reg);
+                    IRConst::Array(_, arr) => {
+                        self.alloc_arr(arr.len(), arr, reg);
                     }
                 }
             }
@@ -318,7 +339,7 @@ impl CodeGen {
                 let offset = self.get_offset(op);
                 assemble!(self.text, "mov {}, [rbp - {}]", reg, offset);
             }
-            _ => unimplemented!(),
+            _ => unreachable!(),
         }
     }
 
@@ -344,5 +365,25 @@ impl CodeGen {
             }
             _ => panic!("UnknownError: unknown operand: {:?}", op),
         }
+    }
+
+    fn alloc_arr(&mut self, len: usize, arr: Vec<Operand>, reg: &str) {
+        let data_size = len * 8;
+        let total_block_size = data_size + 8;
+        let padding = (16 - (total_block_size % 16)) % 16;
+        let padded_block_size = total_block_size + padding;
+
+        assemble!(self.text, "sub rsp, {}", padded_block_size);
+        assemble!(self.text, "mov r10, rsp");
+
+        assemble!(self.text, "mov rax, {}", len);
+        assemble!(self.text, "mov [r10], rax");
+
+        for (i, op) in arr.iter().enumerate() {
+            self.load(op, "rax");
+            assemble!(self.text, "mov [r10 + {}], rax", 8 + i * 8);
+        }
+
+        assemble!(self.text, "mov {}, r10", reg);
     }
 }

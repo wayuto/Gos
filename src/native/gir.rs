@@ -43,6 +43,7 @@ pub enum Op {
     LAnd,
     LOr,
     Xor,
+    Range,
     Neg,
     Inc,
     Dec,

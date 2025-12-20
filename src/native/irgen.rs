@@ -162,15 +162,41 @@ impl IRGen {
                     Literal::Bool(b) => (IRConst::Number(if b { 1 } else { 0 }), IRType::Number),
                     Literal::Str(s) => (IRConst::Str(s), IRType::String),
                     Literal::Void => return ctx.new_tmp(IRType::Void),
-                    Literal::Array(len, arr) => (
-                        IRConst::Array(
-                            len,
-                            arr.iter()
+                    Literal::Array(len, arr) => {
+                        let is_fill_syntax = len > 1 && arr.len() == 1;
+
+                        if is_fill_syntax {
+                            let fill_element = self.compile_expr(arr[0].clone(), ctx);
+
+                            let mut elements = Vec::new();
+                            for _ in 0..len {
+                                elements.push(fill_element.clone());
+                            }
+
+                            (
+                                IRConst::Array(elements.len(), elements.clone()),
+                                IRType::Array(Some(elements.len())),
+                            )
+                        } else {
+                            let elements: Vec<Operand> = arr
+                                .iter()
                                 .map(|e| self.compile_expr(e.to_owned(), ctx))
-                                .collect(),
-                        ),
-                        IRType::Array(Some(len)),
-                    ),
+                                .collect();
+
+                            if len != 0 && len != elements.len() {
+                                panic!(
+                                    "Array literal length mismatch: declared {}, actual {}",
+                                    len,
+                                    elements.len()
+                                );
+                            }
+
+                            (
+                                IRConst::Array(elements.len(), elements.clone()),
+                                IRType::Array(Some(elements.len())),
+                            )
+                        }
+                    }
                 };
 
                 let res_tmp = ctx.new_tmp(ir_type);
@@ -185,9 +211,50 @@ impl IRGen {
                 });
                 res_tmp
             }
+
             Expr::VarDecl(decl) => {
-                let value = self.compile_expr(*decl.value, ctx);
-                ctx.declare_var(decl.name.clone(), ctx.from_var_type(&decl.typ));
+                let mut value = self.compile_expr(*decl.value.clone(), ctx);
+                let value_type = ctx.get_operand_type(&value);
+
+                let var_ir_type = match &decl.typ {
+                    VarType::Array(Some(declared_len)) => {
+                        if let IRType::Array(Some(actual_len)) = &value_type {
+                            if *declared_len > *actual_len && *actual_len == 1 {
+                                if let Operand::Temp(_, _) = value {
+                                    if let Some(last_inst) = ctx.instructions.last() {
+                                        if let Some(Operand::ConstIdx(idx)) = &last_inst.src1 {
+                                            if let IRConst::Array(_, elems) = &self.constants[*idx]
+                                            {
+                                                let fill_elem = elems[0].clone();
+                                                let new_elems = vec![fill_elem; *declared_len];
+
+                                                let new_const =
+                                                    IRConst::Array(*declared_len, new_elems);
+                                                let new_idx = self.get_const_index(new_const);
+
+                                                ctx.instructions.last_mut().unwrap().src1 =
+                                                    Some(Operand::ConstIdx(new_idx));
+
+                                                value = Operand::Temp(
+                                                    ctx.tmp_cnt - 1,
+                                                    IRType::Array(Some(*declared_len)),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if *declared_len != *actual_len {
+                                panic!("TypeError: array length mismatch");
+                            }
+                            IRType::Array(Some(*declared_len))
+                        } else {
+                            panic!("TypeError: expected array");
+                        }
+                    }
+                    _ => ctx.from_var_type(&decl.typ),
+                };
+
+                ctx.declare_var(decl.name.clone(), var_ir_type.clone());
                 ctx.instructions.push(Instruction {
                     op: Op::Store,
                     dst: Some(Operand::Var(decl.name)),
@@ -225,14 +292,13 @@ impl IRGen {
                 let left = self.compile_expr(*bin.left, ctx);
                 let right = self.compile_expr(*bin.right, ctx);
                 let typ = ctx.get_operand_type(&left);
-                if typ != ctx.get_operand_type(&right) {
-                    panic!(
-                        "TypeError: unsupported operation for '{:?}' and '{:?}'",
-                        typ,
-                        ctx.get_operand_type(&right)
-                    )
+                let res_tmp: Operand;
+                if bin.operator == TokenType::RANGE {
+                    res_tmp = ctx.new_tmp(IRType::Array(None));
+                } else {
+                    res_tmp = ctx.new_tmp(typ);
                 }
-                let res_tmp = ctx.new_tmp(typ);
+
                 ctx.instructions.push(Instruction {
                     op: match bin.operator {
                         TokenType::ADD => Op::Add,
@@ -250,7 +316,8 @@ impl IRGen {
                         TokenType::LOGAND => Op::LAnd,
                         TokenType::LOGOR => Op::LOr,
                         TokenType::LOGXOR => Op::Xor,
-                        _ => panic!(),
+                        TokenType::RANGE => Op::Range,
+                        _ => panic!("OpError: unsupported operation: {:?}", bin.operator),
                     },
                     dst: Some(res_tmp.clone()),
                     src1: Some(left),
@@ -412,7 +479,124 @@ impl IRGen {
                 ctx.new_tmp(IRType::Void)
             }
             Expr::For(f) => {
-                unimplemented!()
+                let array_operand = self.compile_expr(*f.iter, ctx);
+                let array_type = ctx.get_operand_type(&array_operand);
+
+                let array_len_operand = match array_type {
+                    IRType::Array(Some(l)) => {
+                        let idx = self.get_const_index(IRConst::Number(l as i64));
+                        Operand::ConstIdx(idx)
+                    }
+                    IRType::Array(None) => {
+                        let len_tmp = ctx.new_tmp(IRType::Number);
+                        ctx.instructions.push(Instruction {
+                            op: Op::SizeOf,
+                            dst: Some(len_tmp.clone()),
+                            src1: Some(array_operand.clone()),
+                            src2: None,
+                        });
+                        len_tmp
+                    }
+                    _ => panic!(
+                        "TypeError: can only iterate over arrays, found {:?}",
+                        array_type
+                    ),
+                };
+
+                ctx.enter_scope();
+                let idx_name = ctx.new_label("idx");
+                let idx_var = Operand::Var(idx_name.clone());
+                ctx.declare_var(idx_name.clone(), IRType::Number);
+
+                let zero_idx = self.get_const_index(IRConst::Number(0));
+                ctx.instructions.push(Instruction {
+                    op: Op::Store,
+                    dst: Some(idx_var.clone()),
+                    src1: Some(Operand::ConstIdx(zero_idx)),
+                    src2: None,
+                });
+
+                let label_cond = ctx.new_label("for_cond");
+                let label_end = ctx.new_label("for_end");
+                ctx.instructions.push(Instruction {
+                    op: Op::Label(label_cond.clone()),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+
+                let curr_idx = ctx.new_tmp(IRType::Number);
+                ctx.instructions.push(Instruction {
+                    op: Op::Load,
+                    dst: Some(curr_idx.clone()),
+                    src1: Some(idx_var.clone()),
+                    src2: None,
+                });
+
+                let cond_tmp = ctx.new_tmp(IRType::Bool);
+                ctx.instructions.push(Instruction {
+                    op: Op::Lt,
+                    dst: Some(cond_tmp.clone()),
+                    src1: Some(curr_idx.clone()),
+                    src2: Some(array_len_operand),
+                });
+
+                ctx.instructions.push(Instruction {
+                    op: Op::JumpIfFalse,
+                    dst: None,
+                    src1: Some(cond_tmp),
+                    src2: Some(Operand::Label(label_end.clone())),
+                });
+
+                ctx.declare_var(f.init.clone(), IRType::Number);
+                let element_tmp = ctx.new_tmp(IRType::Number);
+
+                ctx.instructions.push(Instruction {
+                    op: Op::ArrayAccess,
+                    dst: Some(element_tmp.clone()),
+                    src1: Some(array_operand),
+                    src2: Some(curr_idx.clone()),
+                });
+
+                ctx.instructions.push(Instruction {
+                    op: Op::Store,
+                    dst: Some(Operand::Var(f.init)),
+                    src1: Some(element_tmp),
+                    src2: None,
+                });
+
+                self.compile_expr(*f.body, ctx);
+
+                let one_idx = self.get_const_index(IRConst::Number(1));
+                let next_idx = ctx.new_tmp(IRType::Number);
+
+                ctx.instructions.push(Instruction {
+                    op: Op::Add,
+                    dst: Some(next_idx.clone()),
+                    src1: Some(curr_idx),
+                    src2: Some(Operand::ConstIdx(one_idx)),
+                });
+                ctx.instructions.push(Instruction {
+                    op: Op::Store,
+                    dst: Some(idx_var),
+                    src1: Some(next_idx),
+                    src2: None,
+                });
+                ctx.instructions.push(Instruction {
+                    op: Op::Jump,
+                    dst: None,
+                    src1: Some(Operand::Label(label_cond)),
+                    src2: None,
+                });
+                ctx.instructions.push(Instruction {
+                    op: Op::Label(label_end),
+                    dst: None,
+                    src1: None,
+                    src2: None,
+                });
+
+                ctx.exit_scope();
+                ctx.new_tmp(IRType::Void)
             }
             Expr::FuncDecl(_) => {
                 panic!("SyntaxError: cannot declare a function in a function");
@@ -454,16 +638,20 @@ impl IRGen {
                 res_tmp
             }
             Expr::ArrayAccess(aa) => {
-                let arr = Operand::Var(aa.array);
-                let offset = self.compile_expr(*aa.offset, ctx);
-                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&arr));
-                ctx.instructions.push(Instruction {
-                    op: Op::ArrayAccess,
-                    dst: Some(res_tmp.clone()),
-                    src1: Some(arr),
-                    src2: Some(offset),
-                });
-                res_tmp
+                let arr = Operand::Var(aa.array.clone());
+                if let IRType::Array(_) = ctx.get_operand_type(&arr) {
+                    let offset = self.compile_expr(*aa.offset, ctx);
+                    let res_tmp = ctx.new_tmp(IRType::Number);
+                    ctx.instructions.push(Instruction {
+                        op: Op::ArrayAccess,
+                        dst: Some(res_tmp.clone()),
+                        src1: Some(arr),
+                        src2: Some(offset),
+                    });
+                    res_tmp
+                } else {
+                    panic!("TypeError: {} is not a array", aa.array);
+                }
             }
             Expr::ArrayAssign(aa) => {
                 let arr = Operand::Var(aa.array);
@@ -471,7 +659,7 @@ impl IRGen {
                 let val = self.compile_expr(*aa.value, ctx);
                 let res_tmp = ctx.new_tmp(IRType::Void);
                 ctx.instructions.push(Instruction {
-                    op: Op::ArrayAccess,
+                    op: Op::ArrayAssign,
                     dst: Some(arr),
                     src1: Some(offset),
                     src2: Some(val),
