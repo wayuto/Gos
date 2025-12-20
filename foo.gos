@@ -1,16 +1,5 @@
-extern itoa(num): str
-extern println(str): void
-
-fun f(n: num): num {
-    if n < 2 return n
-    return f(n - 1) + f(n - 2)
-}
-
 pub fun main(): num {
-    println(
-        itoa(
-            f(30)
-        )
-    )
-    return 0
+    let x: arr<_> = [1 2 3 4 5]    
+    x[1] = 3
+    return x[1]
 }

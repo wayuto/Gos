@@ -3,6 +3,7 @@ pub enum IRType {
     Number,
     String,
     Bool,
+    Array(Option<usize>),
     Void,
 }
 
@@ -11,6 +12,7 @@ pub enum IRConst {
     Number(i64),
     Bool(bool),
     Str(String),
+    Array(usize, Vec<Operand>),
     Void,
 }
 
@@ -53,6 +55,8 @@ pub enum Op {
     Return,
     Jump,
     JumpIfFalse,
+    ArrayAccess,
+    ArrayAssign,
     Label(String),
     Extern(String),
     Nop,

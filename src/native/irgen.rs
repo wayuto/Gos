@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::zip, mem::take};
 
 use crate::{
-    ast::{Expr, Extern, FuncDecl, Program},
+    ast::{ArrayAccess, Expr, Extern, FuncDecl, Program},
     native::{IRConst, IRFunction, IRProgram, IRType, Instruction, Op, Operand},
     token::{Literal, TokenType, VarType},
 };
@@ -63,8 +63,8 @@ impl Context {
             VarType::Number => IRType::Number,
             VarType::Bool => IRType::Bool,
             VarType::Str => IRType::String,
+            VarType::Array(len) => IRType::Array(len.to_owned()),
             VarType::Void => IRType::Void,
-            _ => unimplemented!(),
         }
     }
 
@@ -74,6 +74,7 @@ impl Context {
                 IRConst::Number(_) => IRType::Number,
                 IRConst::Bool(_) => IRType::Bool,
                 IRConst::Str(_) => IRType::String,
+                IRConst::Array(len, _) => IRType::Array(Some(len.to_owned())),
                 IRConst::Void => IRType::Void,
             },
             Operand::Var(name) => self.get_var_type(&name),
@@ -161,7 +162,15 @@ impl IRGen {
                     Literal::Bool(b) => (IRConst::Number(if b { 1 } else { 0 }), IRType::Number),
                     Literal::Str(s) => (IRConst::Str(s), IRType::String),
                     Literal::Void => return ctx.new_tmp(IRType::Void),
-                    Literal::Array(_, _) => unimplemented!(),
+                    Literal::Array(len, arr) => (
+                        IRConst::Array(
+                            len,
+                            arr.iter()
+                                .map(|e| self.compile_expr(e.to_owned(), ctx))
+                                .collect(),
+                        ),
+                        IRType::Array(Some(len)),
+                    ),
                 };
 
                 let res_tmp = ctx.new_tmp(ir_type);
@@ -445,10 +454,29 @@ impl IRGen {
                 res_tmp
             }
             Expr::ArrayAccess(aa) => {
-                unimplemented!();
+                let arr = Operand::Var(aa.array);
+                let offset = self.compile_expr(*aa.offset, ctx);
+                let res_tmp = ctx.new_tmp(ctx.get_operand_type(&arr));
+                ctx.instructions.push(Instruction {
+                    op: Op::ArrayAccess,
+                    dst: Some(res_tmp.clone()),
+                    src1: Some(arr),
+                    src2: Some(offset),
+                });
+                res_tmp
             }
             Expr::ArrayAssign(aa) => {
-                unimplemented!();
+                let arr = Operand::Var(aa.array);
+                let offset = self.compile_expr(*aa.offset, ctx);
+                let val = self.compile_expr(*aa.value, ctx);
+                let res_tmp = ctx.new_tmp(IRType::Void);
+                ctx.instructions.push(Instruction {
+                    op: Op::ArrayAccess,
+                    dst: Some(arr),
+                    src1: Some(offset),
+                    src2: Some(val),
+                });
+                res_tmp
             }
             Expr::Extern(ext) => {
                 panic!("SyntaxError: cannot extern a function in a function");

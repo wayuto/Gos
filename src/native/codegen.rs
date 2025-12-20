@@ -16,6 +16,7 @@ pub struct CodeGen {
     str_cnt: usize,
     stack_ptr: usize,
     arg_reg: Vec<String>,
+    ret_label: String,
 }
 
 impl CodeGen {
@@ -35,6 +36,7 @@ impl CodeGen {
                 "r8".to_string(),
                 "r9".to_string(),
             ],
+            ret_label: String::new(),
         }
     }
 
@@ -150,11 +152,37 @@ impl CodeGen {
                 assemble!(self.text, "cmp rax, 0");
                 assemble!(self.text, "je {}", lbl);
             }
-            Op::Return => {
-                let val = code.src1.as_ref().unwrap();
+            Op::ArrayAccess => {
+                let dst = code.dst.as_ref().unwrap();
+                let src1 = code.src1.as_ref().unwrap();
+                let src2 = code.src2.as_ref().unwrap();
+
+                self.load(src1, "r10");
+                self.load(src2, "rcx");
+
+                assemble!(self.text, "lea  rax, [r10 + rcx * 8 + 8]");
+                assemble!(self.text, "mov  rax, [rax]");
+
+                let dst_off = self.get_offset(dst);
+                assemble!(self.text, "mov  [rbp - {}], rax", dst_off);
+            }
+            Op::ArrayAssign => {
+                let arr = code.dst.as_ref().unwrap();
+                let idx = code.src1.as_ref().unwrap();
+                let val = code.src2.as_ref().unwrap();
+
+                self.load(arr, "r10");
+                self.load(idx, "rcx");
                 self.load(val, "rax");
-                assemble!(self.text, "leave");
-                assemble!(self.text, "ret");
+
+                assemble!(self.text, "lea  rdx, [r10 + rcx * 8 + 8]");
+                assemble!(self.text, "mov  [rdx], rax");
+            }
+            Op::Return => {
+                if let Some(ref val) = code.src1 {
+                    self.load(val, "rax");
+                }
+                assemble!(self.text, "jmp {}", self.ret_label);
             }
             _ => panic!("UnknowError: unknown TAC: {:?}", code),
         }
@@ -223,7 +251,7 @@ impl CodeGen {
             }
         }
 
-        let ret_label = format!(".L_{}_exit", func.name);
+        self.ret_label = format!(".L_{}_exit", func.name);
 
         for code in func.instructions {
             match code.op {
@@ -231,7 +259,7 @@ impl CodeGen {
                     if let Some(ref val) = code.src1 {
                         self.load(val, "rax");
                     }
-                    assemble!(self.text, "jmp {}", ret_label);
+                    assemble!(self.text, "jmp {}", self.ret_label);
                 }
                 Op::Label(ref name) => {
                     assemble!(self.text, "{}:", name);
@@ -242,7 +270,7 @@ impl CodeGen {
             }
         }
 
-        assemble!(self.text, "{}:", ret_label);
+        assemble!(self.text, "{}:", self.ret_label);
         assemble!(self.text, "leave");
         assemble!(self.text, "ret");
     }
@@ -265,7 +293,25 @@ impl CodeGen {
                         let s_lbl = self.alloc_str(s);
                         assemble!(self.text, "mov {}, {}", reg, s_lbl);
                     }
-                    _ => unimplemented!(),
+                    IRConst::Array(len, arr) => {
+                        let data_size = len * 8;
+                        let total_block_size = data_size + 8;
+                        let padding = (16 - (total_block_size % 16)) % 16;
+                        let padded_block_size = total_block_size + padding;
+
+                        assemble!(self.text, "sub rsp, {}", padded_block_size);
+                        assemble!(self.text, "mov r10, rsp");
+
+                        assemble!(self.text, "mov rax, {}", len);
+                        assemble!(self.text, "mov [r10], rax");
+
+                        for (i, op) in arr.iter().enumerate() {
+                            self.load(op, "rax");
+                            assemble!(self.text, "mov [r10 + {}], rax", 8 + i * 8);
+                        }
+
+                        assemble!(self.text, "mov {}, r10", reg);
+                    }
                 }
             }
             Operand::Var(_) | Operand::Temp(_, _) => {
