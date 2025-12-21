@@ -49,7 +49,7 @@ sh ./install.sh
 ```gos
 let x: num = 42 
 let message: str = "Hello, Gos!"
-let flags: arr<3> = [true false true] 
+let flags: arr<3> = [1 2 3] 
 let dynamic: arr<_> = [1 2 3 4] # 长度被推断为 4
 ```
 
