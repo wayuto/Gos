@@ -143,10 +143,10 @@ Gos 设计为可与 C 很好互操作。你可以声明外部函数并直接调�
 # 声明外部 C 函数
 
 ```gos
-extern printf(str num): num
+extern println(str): num
 
 pub fun main(): num {
-  extern printf("Value is: %dn" 100)
+  println("Hello world!")
   return 0
 }
 ```

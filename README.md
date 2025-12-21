@@ -151,10 +151,10 @@ them directly. **Calling a C function in Gos:**
 # Declare the external C function
 
 ```
-extern printf(str num): num
+extern println(str): num
 
 pub fun main(): num {
-  extern printf("Value is: %dn" 100)
+  println("Hello world!")
   return 0
 }
 ```
