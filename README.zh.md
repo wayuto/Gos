@@ -31,7 +31,7 @@ sh ./install.sh
 
 ### **基本类型**
 
-- `num`：64 位有符号整数/数字。
+- `int`：64 位有符号整数/数字。
 - `flt`：64 位浮点数（IEEE 754 双精度）。
 - `str`：字符串类型。
 - `bool`：布尔类型（true / false）。
@@ -41,7 +41,7 @@ sh ./install.sh
 ### **变量与常量**
 
 ```gos
-let x: num = 42 
+let x: int = 42 
 let pi: flt = 3.14159
 let message: str = "Hello, Gos!"
 let flags: arr<3> = [1 2 3] 
@@ -80,9 +80,9 @@ for i in 0..10 { println(itoa(i)) }
 在 Gos 中，代码块是表达式。代码块中的最后一个值作为该块的返回值。
 
 ```gos
-let computed: num = { 
-  let a: num = 10 
-  let b: num = 20 
+let computed: int = { 
+  let a: int = 10 
+  let b: int = 20 
   a + b # 这是代码块的值
 }
 ```
@@ -141,7 +141,7 @@ Gos 标准库提供了常用的基础功能。使用 `$import` 引入模块。
 ```gos
 $import "gosio"
 
-pub fun main(): num {
+pub fun main(): int {
   println("Hello world!") 
   return 0
 }
@@ -152,11 +152,11 @@ pub fun main(): num {
 ```gos
 $import "gosio"
 
-pub fun main(): num {
+pub fun main(): int {
   let pi: flt = 3.14159
   let radius: flt = 5.0
   let area: flt = pi * radius * radius
-  println(itoa(area as num))  # 转换为整数以便打印
+  println(itoa(area as int))  # 转换为整数以便打印
   return 0
 }
 ```
@@ -174,13 +174,13 @@ gos -c hello.gos
 $import "gosio"
 $import "convert"
 
-fun fib(n: num a: num b: num): num {
+fun fib(n: int a: int b: int): int {
   if n == 0 return a
   return fib(n - 1 b a + b)
 }
 
-pub fun main(): num {
-  let n: num = fib(40 0 1)
+pub fun main(): int {
+  let n: int = fib(40 0 1)
   println(
     itoa(n)
   ) 
@@ -194,7 +194,7 @@ pub fun main(): num {
 $import "gosio"
 $import "convert"
 
-pub fun main(): num {
+pub fun main(): int {
   let radius: flt = 5.0
   let pi: flt = 3.14159
   let area: flt = pi * radius * radius
@@ -213,9 +213,9 @@ Gos 设计为可与 C 很好互操作。你可以声明外部函数并直接调�
 # 声明外部 C 函数
 
 ```gos
-extern println(str): num
+extern println(str): int
 
-pub fun main(): num {
+pub fun main(): int {
   println("Hello world!")
   return 0
 }
@@ -226,7 +226,7 @@ pub fun main(): num {
 # 使用 `pub` 使其对链接器可见
 
 ```gos
-pub fun add(x: num y: num): num {
+pub fun add(x: int y: int): int {
   return x + y
 }
 ```

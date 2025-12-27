@@ -34,7 +34,7 @@ sh ./install.sh
 
 ### **Basic Types**
 
-- `num`: 64-bit signed integer/number.
+- `int`: 64-bit signed integer.
 - `flt`: 64-bit floating-point number (IEEE 754 double precision).
 - `str`: String type.
 - `bool`: Boolean logic (true / false).
@@ -44,7 +44,7 @@ sh ./install.sh
 ### **Variables & Constants**
 
 ```
-let x: num = 42 
+let x: int = 42 
 let pi: flt = 3.14159
 let message: str = "Hello, Gos!"
 let flags: arr<3> = [1 2 3] 
@@ -87,9 +87,9 @@ In Gos, code blocks are expressions. The last value in a block is returned as
 the block's value.
 
 ```
-let computed: num = { 
-  let a: num = 10 
-  let b: num = 20 
+let computed: int = { 
+  let a: int = 10 
+  let b: int = 20 
   a + b # This is the block's value
 }
 ```
@@ -122,7 +122,7 @@ $define PI 3.14159
 $define MAX_SIZE 100
 $define GREETING "Hello, Gos!"
 
-pub fun main(): num {
+pub fun main(): int {
   let arr: arr<MAX_SIZE> = [0]
   let radius: flt = 5.0
   let area: flt = PI * radius * radius
@@ -158,7 +158,7 @@ Save this as `hello.gos`:
 ```
 $import "gosio"
 
-pub fun main(): num {
+pub fun main(): int {
   println("Hello world!") 
   return 0
 }
@@ -177,13 +177,13 @@ gos -c hello.gos
 $import "gosio"
 $import "convert"
 
-fun fib(n: num a: num b: num): num {
+fun fib(n: int a: int b: int): int {
   if n == 0 return a
   return fib(n - 1 b a + b)
 }
 
-pub fn main(): num {
-  let n: num = fib(40 0 1)
+pub fn main(): int {
+  let n: int = fib(40 0 1)
   println(
     itoa(n)
   ) 
@@ -197,7 +197,7 @@ pub fn main(): num {
 $import "gosio"
 $import "convert"
 
-pub fun main(): num {
+pub fun main(): int {
   let radius: flt = 5.0
   let pi: flt = 3.14159
   let area: flt = pi * radius * radius
@@ -215,9 +215,9 @@ them directly. **Calling a C function in Gos:**
 # Declare the external C function
 
 ```
-extern println(str): num
+extern println(str): int
 
-pub fun main(): num {
+pub fun main(): int {
   println("Hello world!")
   return 0
 }
@@ -228,7 +228,7 @@ pub fun main(): num {
 # Use `pub` to make it visible to the linker
 
 ```
-pub fun add(x: num y: num): num {
+pub fun add(x: int y: int): int {
   return x + y
 }
 ```
