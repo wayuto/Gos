@@ -826,15 +826,20 @@ impl IRGen {
 
     fn compile_fn(&mut self, decl: FuncDecl) {
         let name = decl.name.clone();
+        let func = self.find_func(&name);
+
         let mut ctx = Context::new();
         ctx.enter_scope();
 
-        let func = self.find_func(&name).clone();
-        let params = func.params.clone();
-
-        for (op, typ) in &params {
-            if let Operand::Var(name) = op {
-                ctx.declare_var(name.clone(), typ.clone());
+        for (i, (param, ty)) in func.params.iter().enumerate() {
+            if let Operand::Var(name) = param {
+                ctx.scope.last_mut().unwrap().insert(
+                    name.clone(),
+                    Symbol {
+                        name: name.clone(),
+                        ir_type: ty.clone(),
+                    },
+                );
             }
         }
 
@@ -842,20 +847,27 @@ impl IRGen {
         let last_op = self.compile_expr(body, &mut ctx);
         ctx.exit_scope();
 
-        if matches!(
-            ctx.instructions.last().map(|i| i.op.clone()),
-            Some(Op::Return(_))
-        ) {
+        let last_inst_op = ctx.instructions.last().map(|i| i.op.clone());
+
+        let last_is_return = matches!(last_inst_op, Some(Op::Return(_)));
+
+        if !last_is_return {
+            let reg = if func.ret_type == IRType::Float {
+                "xmm0".to_string()
+            } else {
+                "rax".to_string()
+            };
+
             ctx.instructions.push(Instruction {
-                op: Op::Return(String::from("rax")),
+                op: Op::Return(reg),
                 dst: None,
                 src1: Some(last_op),
                 src2: None,
             });
         }
 
-        if let Some(func) = self.functions.iter_mut().find(|f| f.name == name) {
-            func.instructions = take(&mut ctx.instructions);
+        if let Some(f) = self.functions.iter_mut().find(|f| f.name == name) {
+            f.instructions = take(&mut ctx.instructions);
         }
     }
 

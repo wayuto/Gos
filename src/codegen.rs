@@ -15,6 +15,8 @@ pub struct CodeGen {
     data: String,
     vars: HashMap<String, usize>,
     lbl_cnt: usize,
+    str_cache: HashMap<String, String>,
+    flt_cache: HashMap<OrderedFloat<f64>, String>,
     stack_ptr: usize,
     arg_reg: Vec<String>,
     flt_arg_reg: Vec<String>,
@@ -33,6 +35,8 @@ impl CodeGen {
             data: String::new(),
             vars: HashMap::new(),
             lbl_cnt: 0,
+            str_cache: HashMap::new(),
+            flt_cache: HashMap::new(),
             stack_ptr: 0,
             arg_reg: vec![
                 "rdi".to_string(),
@@ -76,15 +80,35 @@ impl CodeGen {
             Op::Move => {
                 let src = code.src1.as_ref().unwrap();
                 let dst = code.dst.as_ref().unwrap();
+
                 self.load(src, "rax");
-                assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+
+                if match src {
+                    Operand::Var(_) | Operand::Temp(_, _) => {
+                        self.get_offset(src) != self.get_offset(dst)
+                    }
+                    _ => true,
+                } {
+                    assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+                }
+
                 self.regs.insert("rax".to_string(), Some(dst.clone()));
             }
             Op::FMove => {
                 let src = code.src1.as_ref().unwrap();
                 let dst = code.dst.as_ref().unwrap();
+
                 self.load(src, "xmm0");
-                assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst));
+
+                if match src {
+                    Operand::Var(_) | Operand::Temp(_, _) => {
+                        self.get_offset(src) != self.get_offset(dst)
+                    }
+                    _ => true,
+                } {
+                    assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst));
+                }
+
                 self.regs.insert("xmm0".to_string(), Some(dst.clone()));
             }
             Op::Load | Op::Store => {
@@ -92,35 +116,57 @@ impl CodeGen {
                 let dst = code.dst.as_ref().unwrap();
                 self.load(src, "rax");
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+                self.regs.insert("rax".to_string(), Some(dst.clone()));
             }
+
             Op::FLoad | Op::FStore => {
                 let src = code.src1.as_ref().unwrap();
                 let dst = code.dst.as_ref().unwrap();
                 self.load(src, "xmm0");
                 assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst));
+                self.regs.insert("xmm0".to_string(), Some(dst.clone()));
             }
             Op::Add | Op::Sub | Op::Mul | Op::Div | Op::LAnd | Op::LOr | Op::Xor => {
                 let dst = code.dst.as_ref().unwrap();
                 let src1 = code.src1.as_ref().unwrap();
                 let src2 = code.src2.as_ref().unwrap();
+                let asm_op = self.get_asm_op(&code.op).to_string();
 
                 self.load(src1, "rax");
-                self.load(src2, "rbx");
-                match code.op {
-                    Op::Add => assemble!(self.text, "add rax, rbx"),
-                    Op::Sub => assemble!(self.text, "sub rax, rbx"),
-                    Op::Mul => assemble!(self.text, "imul rax, rbx"),
-                    Op::Div => {
-                        assemble!(self.text, "cqo");
-                        assemble!(self.text, "idiv rbx");
+
+                match src2 {
+                    Operand::ConstIdx(idx) => {
+                        if let IRConst::Int(v) = &self.program.constants[*idx] {
+                            assemble!(self.text, "{} rax, {}", asm_op, v);
+                        }
                     }
-                    Op::LAnd => assemble!(self.text, "and rax, rbx"),
-                    Op::LOr => assemble!(self.text, "or rax, rbx"),
-                    Op::Xor => assemble!(self.text, "xor rax, rbx"),
-                    _ => unreachable!(),
+                    Operand::Const(IRConst::Int(v)) => {
+                        assemble!(self.text, "{} rax, {}", asm_op, v);
+                    }
+                    Operand::Var(_) | Operand::Temp(_, _) => {
+                        let off = self.get_offset(src2);
+                        if matches!(code.op, Op::Div) {
+                            self.load(src2, "rbx");
+                            assemble!(self.text, "cqo");
+                            assemble!(self.text, "idiv rbx");
+                        } else {
+                            assemble!(self.text, "{} rax, qword [rbp - {}]", asm_op, off);
+                        }
+                    }
+                    _ => {
+                        self.load(src2, "rbx");
+                        assemble!(self.text, "{} rax, rbx", asm_op);
+                    }
                 }
+
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
-                self.regs.clear();
+
+                self.regs.remove("rax");
+                self.regs.remove("rdx");
+                if matches!(code.op, Op::Div) {
+                    self.regs.remove("rbx");
+                }
+
                 self.regs.insert("rax".to_string(), Some(dst.clone()));
             }
             Op::FAdd | Op::FSub | Op::FMul | Op::FDiv => {
@@ -128,17 +174,30 @@ impl CodeGen {
                 let src1 = code.src1.as_ref().unwrap();
                 let src2 = code.src2.as_ref().unwrap();
 
+                let fasm_op = self.get_fasm_op(&code.op).to_string();
+
                 self.load(src1, "xmm0");
-                self.load(src2, "xmm1");
-                match code.op {
-                    Op::FAdd => assemble!(self.text, "addsd xmm0, xmm1"),
-                    Op::FSub => assemble!(self.text, "subsd xmm0, xmm1"),
-                    Op::FMul => assemble!(self.text, "mulsd xmm0, xmm1"),
-                    Op::FDiv => assemble!(self.text, "divsd xmm0, xmm1"),
-                    _ => unreachable!(),
+
+                match src2 {
+                    Operand::ConstIdx(idx) => {
+                        if let IRConst::Float(f) = &self.program.constants[*idx] {
+                            let lbl = self.alloc_flt(*f);
+                            assemble!(self.text, "{} xmm0, [rel {}]", fasm_op, lbl);
+                        }
+                    }
+
+                    Operand::Var(_) | Operand::Temp(_, _) => {
+                        let off = self.get_offset(src2);
+                        assemble!(self.text, "{} xmm0, qword [rbp - {}]", fasm_op, off);
+                    }
+                    _ => {
+                        self.load(src2, "xmm1");
+                        assemble!(self.text, "{} xmm0, xmm1", fasm_op);
+                    }
                 }
+
                 assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst));
-                self.regs.clear();
+
                 self.regs.insert("xmm0".to_string(), Some(dst.clone()));
             }
             Op::Eq | Op::Ne | Op::Gt | Op::Ge | Op::Lt | Op::Le => {
@@ -255,7 +314,14 @@ impl CodeGen {
 
                     assemble!(self.text, "call {}", name);
 
-                    self.regs.clear();
+                    let caller_saved =
+                        ["rax", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11"];
+                    for reg in caller_saved {
+                        self.regs.remove(reg);
+                    }
+                    for i in 0..16 {
+                        self.regs.remove(&format!("xmm{}", i));
+                    }
 
                     let is_float = match dst {
                         Operand::Temp(_, IRType::Float) => true,
@@ -264,9 +330,11 @@ impl CodeGen {
 
                     if is_float {
                         assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst));
+
                         self.regs.insert("xmm0".to_string(), Some(dst.clone()));
                     } else {
                         assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst));
+
                         self.regs.insert("rax".to_string(), Some(dst.clone()));
                     }
                 }
@@ -335,7 +403,6 @@ impl CodeGen {
                 }
             }
         }
-
         for inst in &func.instructions {
             let mut register_op = |op_opt: &Option<Operand>| {
                 if let Some(op) = op_opt {
@@ -363,11 +430,9 @@ impl CodeGen {
         }
 
         let stack_size = (offset + 15) & !15;
-
         if func.is_pub {
             assemble!(self.text, "global {}", func.name);
         }
-
         assemble!(self.text, "{}:", func.name);
         assemble!(self.text, "push rbp");
         assemble!(self.text, "mov rbp, rsp");
@@ -377,7 +442,6 @@ impl CodeGen {
 
         let loop_label = format!(".L_{}_loop", func.name);
         assemble!(self.text, "{}:", loop_label);
-
         self.curr_fn = func.name.clone();
         self.ret_label = format!(".L_{}_exit", func.name);
 
@@ -385,46 +449,35 @@ impl CodeGen {
         let mut flt_idx = 0;
         for (param, ty) in &func.params {
             let off = self.get_offset(param);
-            if *ty == IRType::Float {
+            if matches!(ty, IRType::Float) {
                 if flt_idx < 8 {
-                    assemble!(self.text, "movsd [rbp - {}], xmm{}", off, flt_idx);
+                    let reg = format!("xmm{}", flt_idx);
+                    assemble!(self.text, "movsd [rbp - {}], {}", off, reg);
+                    self.regs.insert(reg, Some(param.clone()));
+
                     flt_idx += 1;
                 }
             } else {
                 if int_idx < 6 {
-                    assemble!(self.text, "mov [rbp - {}], {}", off, self.arg_reg[int_idx]);
+                    let reg = self.arg_reg[int_idx].clone();
+                    assemble!(self.text, "mov [rbp - {}], {}", off, reg);
+                    self.regs.insert(reg, Some(param.clone()));
+
                     int_idx += 1;
                 }
             }
         }
 
         let insts = &func.instructions;
-        let mut i = 0;
-        while i < insts.len() {
-            let code = &insts[i];
-
-            if code.op == Op::Call {
-                if let Some(Operand::Function(ref name)) = code.src1 {
-                    let is_tail = name == &self.curr_fn
-                        && (i + 1 < insts.len() && matches!(insts[i + 1].op, Op::Return(_)));
-
-                    if is_tail {
-                        self.regs.clear();
-                        assemble!(self.text, "jmp {}", loop_label);
-                        i += 2;
-                        continue;
-                    }
-                }
-            }
-
-            match code.op.clone() {
+        for (i, code) in insts.iter().enumerate() {
+            match &code.op {
                 Op::Return(reg_name) => {
                     if let Some(ref val) = code.src1 {
-                        self.load(val, reg_name.as_str());
+                        self.load(val, reg_name);
                     }
                     assemble!(self.text, "jmp {}", self.ret_label);
                 }
-                Op::Label(ref name) => {
+                Op::Label(name) => {
                     assemble!(self.text, "{}:", name);
                     self.regs.clear();
                 }
@@ -432,7 +485,6 @@ impl CodeGen {
                     self.compile_code(code.clone());
                 }
             }
-            i += 1;
         }
 
         assemble!(self.text, "{}:", self.ret_label);
@@ -441,78 +493,102 @@ impl CodeGen {
     }
 
     fn load(&mut self, op: &Operand, reg: &str) {
-        if self.regs.get(reg).and_then(|i| i.as_ref()) == Some(op) {
-            return;
-        }
-
-        let is_xmm = reg.starts_with("xmm");
-        let mov_inst = if is_xmm { "movsd" } else { "mov" };
-
-        let mut found_reg = None;
-        for (r_name, r_op) in &self.regs {
-            if r_op.as_ref() == Some(op) {
-                found_reg = Some(r_name.clone());
-                break;
+        if let Some(Some(cached_op)) = self.regs.get(reg) {
+            if cached_op == op {
+                return;
             }
         }
 
-        if let Some(src_reg) = found_reg {
-            if src_reg != reg {
-                let inst = if is_xmm && src_reg.starts_with("xmm") {
-                    "movsd"
-                } else {
-                    "mov"
-                };
-                assemble!(self.text, "{} {}, {}", inst, reg, src_reg);
-            }
-        } else {
-            match op {
-                Operand::ConstIdx(idx) => match &self.program.constants[*idx] {
-                    IRConst::Int(n) => assemble!(self.text, "mov {}, {}", reg, n),
-                    IRConst::Bool(b) => {
-                        assemble!(self.text, "mov {}, {}", reg, if *b { 1 } else { 0 })
-                    }
-                    IRConst::Void => assemble!(self.text, "mov {}, 0", reg),
-                    IRConst::Str(s) => {
-                        let lbl = self.alloc_str(s.to_owned());
-                        assemble!(self.text, "mov {}, {}", reg, lbl);
-                    }
-                    IRConst::Array(_, arr) => self.alloc_arr(arr.len(), arr.clone(), reg),
+        match op {
+            Operand::ConstIdx(idx) => {
+                let constant = &self.program.constants[*idx];
+                match constant {
+                    IRConst::Int(v) => assemble!(self.text, "mov {}, {}", reg, v),
                     IRConst::Float(f) => {
                         let lbl = self.alloc_flt(*f);
-                        assemble!(self.text, "movsd {}, [rel {}]", reg, lbl);
+                        if reg.starts_with("xmm") {
+                            assemble!(self.text, "movsd {}, [rel {}]", reg, lbl);
+                        } else {
+                            assemble!(self.text, "mov {}, [rel {}]", reg, lbl);
+                        }
                     }
-                },
-                Operand::Var(_) | Operand::Temp(_, _) => {
-                    if is_xmm {
-                        assemble!(
-                            self.text,
-                            "movsd {}, qword [rbp - {}]",
-                            reg,
-                            self.get_offset(op)
-                        );
+                    IRConst::Str(s) => {
+                        let lbl = self.alloc_str(s.clone());
+                        assemble!(self.text, "lea {}, [rel {}]", reg, lbl);
+                    }
+                    _ => {}
+                }
+            }
+
+            Operand::Const(c) => match c {
+                IRConst::Int(v) => assemble!(self.text, "mov {}, {}", reg, v),
+                IRConst::Float(f) => {
+                    let lbl = self.alloc_flt(*f);
+                    if reg.starts_with("xmm") {
+                        assemble!(self.text, "movsd {}, [rel {}]", reg, lbl);
                     } else {
-                        assemble!(self.text, "mov {}, [rbp - {}]", reg, self.get_offset(op));
+                        assemble!(self.text, "mov {}, [rel {}]", reg, lbl);
                     }
                 }
-                _ => unreachable!(),
+                IRConst::Str(s) => {
+                    let lbl = self.alloc_str(s.clone());
+                    assemble!(self.text, "lea {}, [rel {}]", reg, lbl);
+                }
+                _ => {}
+            },
+
+            Operand::Var(_) | Operand::Temp(_, _) => {
+                let off = self.get_offset(op);
+                if reg.starts_with("xmm") {
+                    assemble!(self.text, "movsd {}, qword [rbp - {}]", reg, off);
+                } else {
+                    assemble!(self.text, "mov {}, [rbp - {}]", reg, off);
+                }
             }
+
+            Operand::Function(name) => {
+                assemble!(self.text, "lea {}, [rel {}]", reg, name);
+            }
+
+            _ => {}
         }
+
         self.regs.insert(reg.to_string(), Some(op.clone()));
     }
 
     fn alloc_str(&mut self, s: String) -> String {
-        let lbl = format!("L.S.{}", self.lbl_cnt);
-        self.lbl_cnt += 1;
-        assemble!(self.data, "{} db {}, 0", lbl, s);
-        lbl
+        if let Some(lbl) = self.str_cache.get(&s) {
+            return lbl.clone();
+        } else {
+            let lbl = format!("L.S.{}", self.lbl_cnt);
+            self.str_cache.insert(s.clone(), lbl.clone());
+            self.lbl_cnt += 1;
+            let bytes = s.as_bytes();
+            let len = bytes.len();
+            assemble!(
+                self.data,
+                "{} db {}, 0",
+                lbl,
+                bytes
+                    .iter()
+                    .map(|b| b.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            lbl
+        }
     }
 
     fn alloc_flt(&mut self, f: OrderedFloat<f64>) -> String {
-        let lbl = format!("L.F.{}", self.lbl_cnt);
-        self.lbl_cnt += 1;
-        assemble!(self.data, "{} dq 0x{:x}", lbl, f.0.to_bits());
-        lbl
+        if let Some(lbl) = self.flt_cache.get(&f) {
+            return lbl.clone();
+        } else {
+            let lbl = format!("L.F.{}", self.lbl_cnt);
+            self.flt_cache.insert(f, lbl.clone());
+            self.lbl_cnt += 1;
+            assemble!(self.data, "{} dq 0x{:x}", lbl, f.into_inner().to_bits());
+            lbl
+        }
     }
 
     fn get_offset(&self, op: &Operand) -> usize {
@@ -535,5 +611,27 @@ impl CodeGen {
         }
         assemble!(self.text, "mov {}, r10", reg);
         self.regs.clear();
+    }
+
+    fn get_asm_op(&self, op: &Op) -> &str {
+        match op {
+            Op::Add => "add",
+            Op::Sub => "sub",
+            Op::Mul => "imul",
+            Op::LAnd => "and",
+            Op::LOr => "or",
+            Op::Xor => "xor",
+            _ => "",
+        }
+    }
+
+    fn get_fasm_op(&self, op: &Op) -> &str {
+        match op {
+            Op::FAdd => "addsd",
+            Op::FSub => "subsd",
+            Op::FMul => "mulsd",
+            Op::FDiv => "divsd",
+            _ => "",
+        }
     }
 }
