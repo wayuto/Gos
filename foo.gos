@@ -1,7 +1,6 @@
 $import "gosio"
 $import "convert"
-
-$define PI 3.14
+$import "math"
 
 fun f(n: flt): flt {
     return n * n * PI
