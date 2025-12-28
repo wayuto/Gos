@@ -53,11 +53,6 @@ impl<'a> Preprocessor<'a> {
         }
     }
 
-    pub fn with_defines(mut self, defines: HashMap<String, String>) -> Self {
-        self.defines = defines;
-        self
-    }
-
     fn current(&mut self) -> char {
         *self.src.peek().unwrap_or(&'\0')
     }
@@ -132,41 +127,59 @@ impl<'a> Preprocessor<'a> {
                         self.defines.insert(name, value.trim().to_string());
                     }
                     "import" => {
-                        let file = self.parser_file_path();
-                        if let Some(file_name) = file {
-                            let base_path = if self.path.is_empty() {
-                                "."
-                            } else {
-                                &self.path
-                            };
-                            let mut src_path = format!("{}/{}", base_path, file_name);
-                            if !src_path.ends_with(".gos") {
-                                src_path.push_str(".gos");
+                        let file_name =
+                            self.parser_file_path().ok_or(PreprocessorError::IoError {
+                                message: "Invalid import path".to_string(),
+                                row: self.row,
+                                col: self.col,
+                            })?;
+
+                        let paths_to_try = [
+                            format!(
+                                "{}/{}",
+                                if self.path.is_empty() {
+                                    "."
+                                } else {
+                                    &self.path
+                                },
+                                file_name
+                            ),
+                            format!(
+                                "{}/{}.gos",
+                                if self.path.is_empty() {
+                                    "."
+                                } else {
+                                    &self.path
+                                },
+                                file_name
+                            ),
+                            format!("/usr/local/gos/{}", file_name),
+                            format!("/usr/local/gos/{}.gos", file_name),
+                        ];
+
+                        let mut raw_content = None;
+                        for p in &paths_to_try {
+                            if let Ok(c) = fs::read_to_string(p) {
+                                raw_content = Some(c);
+                                break;
                             }
+                        }
 
-                            let content = fs::read_to_string(&src_path)
-                                .or_else(|_| {
-                                    let alt_path = format!(
-                                        "/usr/local/gos/{}",
-                                        if file_name.ends_with(".gos") {
-                                            file_name.clone()
-                                        } else {
-                                            format!("{}.gos", file_name)
-                                        }
-                                    );
-                                    fs::read_to_string(alt_path)
-                                })
-                                .map_err(|_| PreprocessorError::ImportError {
-                                    file: file_name,
-                                    row: self.row,
-                                    col: self.col,
-                                })?;
+                        if let Some(content) = raw_content {
+                            let mut child_pp = Preprocessor::new(&content, self.path.clone());
 
-                            let mut pp = Preprocessor::new(&content, self.path.clone())
-                                .with_defines(self.defines.clone());
-                            output.push_str(&pp.preprocess()?);
+                            child_pp.defines = self.defines.clone();
 
-                            self.defines = pp.defines;
+                            let processed_sub = child_pp.preprocess()?;
+                            output.push_str(&processed_sub);
+
+                            self.defines = child_pp.defines;
+                        } else {
+                            return Err(PreprocessorError::ImportError {
+                                file: file_name,
+                                row: self.row,
+                                col: self.col,
+                            });
                         }
                     }
                     _ => {
