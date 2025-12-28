@@ -6,9 +6,21 @@ use crate::token::{Literal, Token, TokenType, VarType};
 
 #[derive(Debug, Clone)]
 pub enum LexerError {
-    SyntaxError { message: String, row: usize, col: usize },
-    InvalidNumber { row: usize, col: usize },
-    UnexpectedChar { expected: Option<String>, found: char, row: usize, col: usize },
+    SyntaxError {
+        message: String,
+        row: usize,
+        col: usize,
+    },
+    InvalidNumber {
+        row: usize,
+        col: usize,
+    },
+    UnexpectedChar {
+        expected: Option<String>,
+        found: char,
+        row: usize,
+        col: usize,
+    },
 }
 
 impl std::error::Error for LexerError {}
@@ -22,9 +34,18 @@ impl std::fmt::Display for LexerError {
             LexerError::InvalidNumber { row, col } => {
                 write!(f, "Invalid number at {}:{}", row, col)
             }
-            LexerError::UnexpectedChar { expected, found, row, col } => {
+            LexerError::UnexpectedChar {
+                expected,
+                found,
+                row,
+                col,
+            } => {
                 if let Some(exp) = expected {
-                    write!(f, "Unexpected char at {}:{}: expected '{}', found '{}'", row, col, exp, found)
+                    write!(
+                        f,
+                        "Unexpected char at {}:{}: expected '{}', found '{}'",
+                        row, col, exp, found
+                    )
                 } else {
                     write!(f, "Unexpected char at {}:{}: '{}'", row, col, found)
                 }
@@ -57,7 +78,7 @@ impl<'a> Lexer<'a> {
     fn current(&mut self) -> char {
         *self.src.peek().unwrap_or(&'\0')
     }
-    
+
     fn current_safe(&mut self) -> Result<char, LexerError> {
         Ok(*self.src.peek().ok_or_else(|| LexerError::UnexpectedChar {
             expected: None,
@@ -89,10 +110,14 @@ impl<'a> Lexer<'a> {
         self.is_flt = false;
 
         while self.current().is_numeric() {
-            int_part = int_part * 10 + self.current().to_digit(10).ok_or_else(|| LexerError::InvalidNumber {
-                row: self.tok.row,
-                col: self.tok.col,
-            })?;
+            int_part = int_part * 10
+                + self
+                    .current()
+                    .to_digit(10)
+                    .ok_or_else(|| LexerError::InvalidNumber {
+                        row: self.tok.row,
+                        col: self.tok.col,
+                    })?;
             self.bump();
         }
 
@@ -107,10 +132,14 @@ impl<'a> Lexer<'a> {
             }
             while self.current().is_numeric() {
                 frac_div *= 10;
-                frac_part = frac_part * 10 + self.current().to_digit(10).ok_or_else(|| LexerError::InvalidNumber {
-                    row: self.tok.row,
-                    col: self.tok.col,
-                })?;
+                frac_part = frac_part * 10
+                    + self
+                        .current()
+                        .to_digit(10)
+                        .ok_or_else(|| LexerError::InvalidNumber {
+                            row: self.tok.row,
+                            col: self.tok.col,
+                        })?;
                 self.bump();
             }
         }
@@ -121,12 +150,12 @@ impl<'a> Lexer<'a> {
     fn parse_ident(&mut self) -> String {
         let mut ident = String::new();
 
-        if self.current().is_ascii_alphabetic() {
+        if self.current().is_ascii_alphabetic() || self.current() == '_' {
             ident.push(self.current());
             self.bump();
         }
 
-        while self.current().is_alphanumeric() {
+        while self.current().is_alphanumeric() || self.current() == '_' {
             ident.push(self.current());
             self.bump();
         }
