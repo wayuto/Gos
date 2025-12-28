@@ -199,7 +199,7 @@ impl<'a> Lexer<'a> {
                 };
             }
             return Ok(());
-        } else if self.current().is_alphabetic() {
+        } else if self.current().is_alphabetic() || self.current() == '_' {
             let ident: String = self.parse_ident();
             match ident.as_str() {
                 "true" => {

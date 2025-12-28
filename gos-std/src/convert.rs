@@ -92,6 +92,47 @@ pub extern "C" fn atoi(s: *const u8) -> isize {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn atof(s: *const u8) -> f64 {
+    unsafe {
+        if s.is_null() {
+            return 0.0;
+        }
+
+        let mut ptr = s;
+        let mut res = 0.0;
+        let mut sign = 1.0;
+
+        while *ptr == b' ' || *ptr == b'\t' || *ptr == b'\n' || *ptr == b'\r' {
+            ptr = ptr.add(1);
+        }
+
+        if *ptr == b'-' {
+            sign = -1.0;
+            ptr = ptr.add(1);
+        } else if *ptr == b'+' {
+            ptr = ptr.add(1);
+        }
+
+        while *ptr >= b'0' && *ptr <= b'9' {
+            res = res * 10.0 + (*ptr - b'0') as f64;
+            ptr = ptr.add(1);
+        }
+
+        if *ptr == b'.' {
+            ptr = ptr.add(1);
+            let mut factor = 0.1;
+            while *ptr >= b'0' && *ptr <= b'9' {
+                res += (*ptr - b'0') as f64 * factor;
+                factor /= 10.0;
+                ptr = ptr.add(1);
+            }
+        }
+
+        res * sign
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn ftoa(n: f64) -> *const u8 {
     unsafe {
         let buffer = &raw mut BUFFER;

@@ -1,23 +1,18 @@
 $import "gosio"
 $import "convert"
-$import "array"
+
+fun f(n: flt): flt {
+    return n * 2.5
+}
 
 pub fun main(): int {
-    let x: arr<_> = [10 9 8 7 6 5 4 3 2 1]
-    let N: int = sizeof x
-
-    for i in 0 ~ N-1 {
-        for j in 0 ~ N-1-i {
-            if x[j] > x[j + 1] {
-                let temp: int = x[j]
-                x[j] = x[j + 1]
-                x[j + 1] = temp
-            }
-        }
-    }
-
-    for i in x {
-        println(itoa(i))
-    }
+    let n: flt = atof(
+        input("Enter a number: ")
+    )
+    println(
+        ftoa(
+            f(n)
+        )
+    )
     return 0
 }
