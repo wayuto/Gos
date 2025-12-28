@@ -17,7 +17,9 @@ impl std::fmt::Display for CodeGenError {
         match self {
             CodeGenError::MissingOperand { message } => write!(f, "Missing operand: {}", message),
             CodeGenError::InvalidOperand { message } => write!(f, "Invalid operand: {}", message),
-            CodeGenError::UnsupportedOperation { message } => write!(f, "Unsupported operation: {}", message),
+            CodeGenError::UnsupportedOperation { message } => {
+                write!(f, "Unsupported operation: {}", message)
+            }
         }
     }
 }
@@ -74,6 +76,14 @@ impl CodeGen {
                 "xmm5".to_string(),
                 "xmm6".to_string(),
                 "xmm7".to_string(),
+                "xmm8".to_string(),
+                "xmm9".to_string(),
+                "xmm10".to_string(),
+                "xmm11".to_string(),
+                "xmm12".to_string(),
+                "xmm13".to_string(),
+                "xmm14".to_string(),
+                "xmm15".to_string(),
             ],
             ret_label: String::new(),
             regs: HashMap::new(),
@@ -97,12 +107,18 @@ impl CodeGen {
     fn compile_code(&mut self, code: Instruction) -> Result<(), CodeGenError> {
         match code.op {
             Op::Move => {
-                let src = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Move operation requires src1".to_string(),
-                })?;
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Move operation requires dst".to_string(),
-                })?;
+                let src = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Move operation requires src1".to_string(),
+                    })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Move operation requires dst".to_string(),
+                    })?;
 
                 self.load(src, "rax")?;
 
@@ -119,12 +135,18 @@ impl CodeGen {
                 Ok(())
             }
             Op::FMove => {
-                let src = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FMove operation requires src1".to_string(),
-                })?;
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FMove operation requires dst".to_string(),
-                })?;
+                let src = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FMove operation requires src1".to_string(),
+                    })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FMove operation requires dst".to_string(),
+                    })?;
 
                 self.load(src, "xmm0")?;
 
@@ -141,12 +163,18 @@ impl CodeGen {
                 Ok(())
             }
             Op::Load | Op::Store => {
-                let src = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Load/Store operation requires src1".to_string(),
-                })?;
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Load/Store operation requires dst".to_string(),
-                })?;
+                let src = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Load/Store operation requires src1".to_string(),
+                    })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Load/Store operation requires dst".to_string(),
+                    })?;
                 self.load(src, "rax")?;
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst)?);
                 self.regs.insert("rax".to_string(), Some(dst.clone()));
@@ -154,27 +182,42 @@ impl CodeGen {
             }
 
             Op::FLoad | Op::FStore => {
-                let src = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FLoad/FStore operation requires src1".to_string(),
-                })?;
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FLoad/FStore operation requires dst".to_string(),
-                })?;
+                let src = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FLoad/FStore operation requires src1".to_string(),
+                    })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FLoad/FStore operation requires dst".to_string(),
+                    })?;
                 self.load(src, "xmm0")?;
                 assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst)?);
                 self.regs.insert("xmm0".to_string(), Some(dst.clone()));
                 Ok(())
             }
             Op::Add | Op::Sub | Op::Mul | Op::Div | Op::LAnd | Op::LOr | Op::Xor => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Binary operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Binary operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Binary operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Binary operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Binary operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Binary operation requires src2".to_string(),
+                    })?;
                 let asm_op = self.get_asm_op(&code.op).to_string();
 
                 self.load(src1, "rax");
@@ -216,15 +259,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::FAdd | Op::FSub | Op::FMul | Op::FDiv => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float binary operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float binary operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float binary operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float binary operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float binary operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float binary operation requires src2".to_string(),
+                    })?;
 
                 let fasm_op = self.get_fasm_op(&code.op).to_string();
 
@@ -254,15 +306,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::Eq | Op::Ne | Op::Gt | Op::Ge | Op::Lt | Op::Le => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Comparison operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Comparison operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Comparison operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Comparison operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Comparison operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Comparison operation requires src2".to_string(),
+                    })?;
                 self.load(src1, "rax")?;
                 self.load(src2, "rbx")?;
                 assemble!(self.text, "cmp rax, rbx");
@@ -285,15 +346,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::FEq | Op::FNe | Op::FGt | Op::FGe | Op::FLt | Op::FLe => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float comparison operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float comparison operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Float comparison operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float comparison operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float comparison operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Float comparison operation requires src2".to_string(),
+                    })?;
                 self.load(src1, "xmm0")?;
                 self.load(src2, "xmm1")?;
                 assemble!(self.text, "ucomisd xmm0, xmm1");
@@ -314,12 +384,18 @@ impl CodeGen {
                 Ok(())
             }
             Op::Neg | Op::Inc | Op::Dec | Op::SizeOf => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Unary operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Unary operation requires src1".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Unary operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Unary operation requires src1".to_string(),
+                    })?;
                 self.load(src1, "rax");
                 match code.op {
                     Op::Neg => assemble!(self.text, "neg rax"),
@@ -334,12 +410,18 @@ impl CodeGen {
                 Ok(())
             }
             Op::FNeg => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FNeg operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FNeg operation requires src1".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FNeg operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FNeg operation requires src1".to_string(),
+                    })?;
                 self.load(src1, "xmm0");
                 assemble!(self.text, "xorpd xmm0, oword [rel neg_mask]");
                 assemble!(self.text, "movsd [rbp - {}], xmm0", self.get_offset(dst)?);
@@ -348,15 +430,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::Range => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Range operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Range operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Range operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Range operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Range operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Range operation requires src2".to_string(),
+                    })?;
                 self.load(src1, "rdi");
                 self.load(src2, "rsi");
                 assemble!(self.text, "call range");
@@ -366,9 +457,12 @@ impl CodeGen {
                 Ok(())
             }
             Op::Arg(n) => {
-                let op = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Arg operation requires src1".to_string(),
-                })?;
+                let op = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Arg operation requires src1".to_string(),
+                    })?;
                 if n < 6 {
                     let reg = self.arg_reg[n].clone();
                     self.load(op, &reg);
@@ -379,9 +473,12 @@ impl CodeGen {
                 Ok(())
             }
             Op::FArg(n) => {
-                let op = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "FArg operation requires src1".to_string(),
-                })?;
+                let op = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "FArg operation requires src1".to_string(),
+                    })?;
                 if n < 8 {
                     self.curr_flt_reg = n + 1;
                     let reg = self.flt_arg_reg[n].clone();
@@ -395,12 +492,18 @@ impl CodeGen {
                 Ok(())
             }
             Op::Call => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Call operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Call operation requires src1".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Call operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Call operation requires src1".to_string(),
+                    })?;
                 if let Operand::Function(name) = src1 {
                     if self.curr_flt_reg > 0 {
                         assemble!(self.text, "mov al, {}", self.curr_flt_reg);
@@ -443,21 +546,30 @@ impl CodeGen {
                 Ok(())
             }
             Op::Jump => {
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "Jump operation requires src1".to_string(),
-                })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "Jump operation requires src1".to_string(),
+                    })?;
                 if let Operand::Label(lbl) = src1 {
                     assemble!(self.text, "jmp {}", lbl);
                 }
                 Ok(())
             }
             Op::JumpIfFalse => {
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "JumpIfFalse operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "JumpIfFalse operation requires src2".to_string(),
-                })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "JumpIfFalse operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "JumpIfFalse operation requires src2".to_string(),
+                    })?;
                 let lbl = match src2 {
                     Operand::Label(s) => s,
                     _ => {
@@ -472,15 +584,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::ArrayAccess => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAccess operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAccess operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAccess operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAccess operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAccess operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAccess operation requires src2".to_string(),
+                    })?;
                 self.load(src1, "r10")?;
                 self.load(src2, "rcx")?;
                 assemble!(self.text, "lea rax, [r10 + rcx * 8 + 8]");
@@ -491,15 +612,24 @@ impl CodeGen {
                 Ok(())
             }
             Op::ArrayAssign => {
-                let dst = code.dst.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAssign operation requires dst".to_string(),
-                })?;
-                let src1 = code.src1.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAssign operation requires src1".to_string(),
-                })?;
-                let src2 = code.src2.as_ref().ok_or_else(|| CodeGenError::MissingOperand {
-                    message: "ArrayAssign operation requires src2".to_string(),
-                })?;
+                let dst = code
+                    .dst
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAssign operation requires dst".to_string(),
+                    })?;
+                let src1 = code
+                    .src1
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAssign operation requires src1".to_string(),
+                    })?;
+                let src2 = code
+                    .src2
+                    .as_ref()
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: "ArrayAssign operation requires src2".to_string(),
+                    })?;
                 self.load(dst, "r10")?;
                 self.load(src1, "rcx")?;
                 self.load(src2, "rax")?;
@@ -736,14 +866,21 @@ impl CodeGen {
 
     fn get_offset(&self, op: &Operand) -> Result<usize, CodeGenError> {
         match op {
-            Operand::Var(name) => self.vars.get(name).ok_or_else(|| CodeGenError::MissingOperand {
-                message: format!("variable '{}' not found in stack frame", name),
-            }).map(|v| *v),
+            Operand::Var(name) => self
+                .vars
+                .get(name)
+                .ok_or_else(|| CodeGenError::MissingOperand {
+                    message: format!("variable '{}' not found in stack frame", name),
+                })
+                .map(|v| *v),
             Operand::Temp(id, _) => {
                 let key = format!("_tmp_{}", id);
-                self.vars.get(&key).ok_or_else(|| CodeGenError::MissingOperand {
-                    message: format!("temporary '{}' not found in stack frame", key),
-                }).map(|v| *v)
+                self.vars
+                    .get(&key)
+                    .ok_or_else(|| CodeGenError::MissingOperand {
+                        message: format!("temporary '{}' not found in stack frame", key),
+                    })
+                    .map(|v| *v)
             }
             _ => Err(CodeGenError::InvalidOperand {
                 message: "Not a stack operand".to_string(),
