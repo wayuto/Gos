@@ -182,7 +182,7 @@ fun fib(n: int): int {
   return fib(n - 1) + fib(n - 2)
 }
 
-pub fn main(): int {
+pub fun main(): int {
   let n: int = fib(40)
   println(
     itoa(n)
@@ -226,7 +226,6 @@ pub fun add(x: int y: int): int {
 - Architecture: x86_64
 - Operating System: Arch Linux
 - Kernel Version: 6.18.1-zen1-2-zen
-- Desktop Environment: GNOME 49.2
 
 ### Test Content
 
@@ -239,27 +238,23 @@ compute the 1000th Fibonacci number:
 - Python 3.13.11: Python interpreted execution
 
 ```
-➜  fibonacci1000 ./run.sh 
-Benchmark 1: ./foo
-  Time (mean ± σ):     163.6 µs ±  38.8 µs    [User: 94.9 µs, System: 8.2 µs]
-  Range (min … max):   121.4 µs … 2036.7 µs    17324 runs
- 
-  Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet system without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
+➜  fibonacci1000 ./run.sh # in tty
+Benchmark 1: ./fib1000
+  Time (mean ± σ):     260.3 µs ±  67.6 µs    [User: 165.4 µs, System: 30.3 µs]
+  Range (min … max):   157.3 µs … 498.0 µs    12679 runs
  
 Benchmark 2: ./a.out
-  Time (mean ± σ):     479.4 µs ±  42.8 µs    [User: 267.1 µs, System: 117.8 µs]
-  Range (min … max):   365.9 µs … 847.5 µs    5582 runs
+  Time (mean ± σ):     604.2 µs ± 186.1 µs    [User: 290.9 µs, System: 208.3 µs]
+  Range (min … max):   337.4 µs … 1204.2 µs    4869 runs
  
-  Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet system without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
- 
-Benchmark 3: python foo.py
-  Time (mean ± σ):      13.6 ms ±   0.6 ms    [User: 10.7 ms, System: 2.7 ms]
-  Range (min … max):    12.5 ms …  16.2 ms    223 runs
+Benchmark 3: python fib1000.py
+  Time (mean ± σ):      12.9 ms ±   0.4 ms    [User: 10.1 ms, System: 2.6 ms]
+  Range (min … max):    12.4 ms …  14.6 ms    237 runs
  
 Summary
-  ./foo ran
-    2.93 ± 0.74 times faster than ./a.out
-   83.32 ± 20.15 times faster than python foo.py
+  ./fib1000 ran
+    2.32 ± 0.94 times faster than ./a.out
+   49.55 ± 12.95 times faster than python fib1000.py
 ```
 
 ## **⚙️ CLI Reference**
