@@ -41,7 +41,7 @@ sh ./install.sh
 - `arr<N>`: Fixed-size arrays (e.g., arr<5>).
 - `void`: Used for functions that do not return a value.
 
-### **Variables & Constants**
+### **Variables**
 
 ```
 let x: int = 42 
@@ -49,17 +49,7 @@ let pi: flt = 3.14159
 let message: str = "Hello, Alum!"
 let flags: arr<3> = [1 2 3] 
 let dynamic: arr<_> = [1 2 3 4] # Length inferred as 4
-```
-
-### **Floating-Point Numbers**
-
-Alum supports 64-bit floating-point numbers using the `flt` keyword.
-Floating-point literals can be written with decimal notation:
-
-```alum
-let pi: flt = 3.14159
-let e: flt = 2.71828
-let result: flt = 10.5 + 20.3
+let filled: arr<5> = [0] # [0 0 0 0 0]
 ```
 
 Floating-point numbers support all standard arithmetic operations (+, -, *, /)

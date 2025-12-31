@@ -26,7 +26,7 @@ pub extern "C" fn println(fmt: *const u8) -> isize {
     write(1, fmt, len) + write(1, b"\n".as_ptr(), 1)
 }
 
-static mut BUFFER: [u8; 64] = [0; 64];
+static mut BUFFER: [u8; 1024] = [0; 1024];
 
 #[inline(never)]
 #[unsafe(no_mangle)]
@@ -71,4 +71,32 @@ pub extern "C" fn input(prompt: *const u8) -> *const u8 {
     }
 
     buffer as *const u8
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fopen(filename: *const u8, flags: isize, mode: isize) -> isize {
+    syscall(2, filename as isize, flags, mode)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fclose(fd: isize) -> isize {
+    syscall(3, fd, 0, 0)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fread(fd: isize) -> *const u8 {
+    let buffer = &raw mut BUFFER;
+
+    syscall(0, fd, buffer as isize, 1024);
+    buffer as *const u8
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fwrite(fd: isize, buf: *const u8, n: usize) -> isize {
+    syscall(1, fd, buf as isize, n as isize)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn lseek(fd: isize, off: isize, whence: isize) -> isize {
+    syscall(8, fd, off, whence)
 }
