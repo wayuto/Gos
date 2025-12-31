@@ -160,7 +160,7 @@ fn compile(
 
 fn main() {
     let cmd = Command::new("al")
-        .version("0.5.2")
+        .version("0.6.0#happy 2026!")
         .about("The Alum programming language compiler")
         .arg_required_else_help(true)
         .arg(
