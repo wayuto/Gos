@@ -1,7 +1,7 @@
 $import "lib"
 
 pub fun main(): int {
-    let x: arr<_> = [10 9 8 7 6 5 4 3 2 1]
+    let x: arr<_> = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
     let N: int = sizeof x
 
     for i in 0 ~ N-1 {
