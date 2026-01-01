@@ -312,7 +312,22 @@ impl<'a> Parser<'a> {
                 let mut params: Vec<VarType> = Vec::new();
                 while self.lexer.curr_tok().token != TokenType::RPAREN {
                     match self.lexer.curr_tok().token {
-                        TokenType::Type(typ) => params.push(typ),
+                        TokenType::Type(typ) => {
+                            params.push(typ);
+                            self.lexer.next_token()?;
+                            if self.lexer.curr_tok().token == TokenType::COMMA {
+                                self.lexer.next_token()?;
+                            } else if self.lexer.curr_tok().token == TokenType::RPAREN {
+                                break;
+                            } else {
+                                Err(ParserError::UnexpectedChar {
+                                    expected: Some(") or ,".to_string()),
+                                    found: self.lexer.curr_ch(),
+                                    row: self.lexer.curr_tok().row,
+                                    col: self.lexer.curr_tok().col,
+                                })?;
+                            }
+                        }
                         _ => {
                             return Err(ParserError::UnexpectedChar {
                                 expected: Some("TYPE".to_string()),
@@ -322,7 +337,7 @@ impl<'a> Parser<'a> {
                             });
                         }
                     }
-                    self.lexer.next_token()?;
+                    // self.lexer.next_token()?;
                 }
                 self.lexer.next_token()?;
                 if self.lexer.curr_tok().token != TokenType::COLON {
@@ -371,43 +386,43 @@ impl<'a> Parser<'a> {
                 (Expr::Val(l), Expr::Val(r)) => match (l.value, r.value) {
                     (Literal::Int(n), Literal::Int(m)) => match op.clone() {
                         TokenType::LOGAND => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n & m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         TokenType::LOGOR => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n | m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         TokenType::LOGXOR => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n ^ m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         _ => {}
                     },
                     (Literal::Bool(n), Literal::Bool(m)) => match op.clone() {
                         TokenType::LOGAND => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n & m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::LOGOR => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n | m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::LOGXOR => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n ^ m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         _ => {}
                     },
@@ -442,40 +457,40 @@ impl<'a> Parser<'a> {
                 (Expr::Val(l), Expr::Val(r)) => match (l.value, r.value) {
                     (Literal::Int(n), Literal::Int(m)) => match op.clone() {
                         TokenType::COMPEQ => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n == m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPNE => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n != m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPGT => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n > m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPGE => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n >= m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPLT => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n < m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPLE => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n <= m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::RANGE => {
                             let mut arr: Vec<Expr> = Vec::new();
@@ -485,25 +500,25 @@ impl<'a> Parser<'a> {
                                     typ: VarType::Int,
                                 }));
                             }
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Array((m - n) as usize, arr),
                                 typ: VarType::Array(Some((m - n) as usize)),
-                            }));
+                            });
                         }
                         _ => {}
                     },
                     (Literal::Bool(n), Literal::Bool(m)) => match op.clone() {
                         TokenType::COMPAND => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n && m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         TokenType::COMPOR => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Bool(n || m),
                                 typ: VarType::Bool,
-                            }));
+                            });
                         }
                         _ => {}
                     },
@@ -531,16 +546,16 @@ impl<'a> Parser<'a> {
                 (Expr::Val(l), Expr::Val(r)) => match (l.value, r.value) {
                     (Literal::Int(n), Literal::Int(m)) => match op.clone() {
                         TokenType::ADD => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n + m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         TokenType::SUB => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n - m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         _ => {}
                     },
@@ -568,16 +583,16 @@ impl<'a> Parser<'a> {
                 (Expr::Val(l), Expr::Val(r)) => match (l.value, r.value) {
                     (Literal::Int(n), Literal::Int(m)) => match op.clone() {
                         TokenType::MUL => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n * m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         TokenType::DIV => {
-                            return Ok(Expr::Val(Val {
+                            left = Expr::Val(Val {
                                 value: Literal::Int(n / m),
                                 typ: VarType::Int,
-                            }));
+                            });
                         }
                         _ => {}
                     },
@@ -629,13 +644,17 @@ impl<'a> Parser<'a> {
                 let mut array: Vec<Expr> = Vec::new();
                 while self.lexer.curr_tok().token != TokenType::RBRACKET {
                     array.push(self.expr()?);
-                    if self.lexer.curr_tok().token == TokenType::EOF {
-                        return Err(ParserError::UnexpectedChar {
-                            expected: Some("]".to_string()),
+                    if self.lexer.curr_tok().token == TokenType::COMMA {
+                        self.lexer.next_token()?;
+                    } else if self.lexer.curr_tok().token == TokenType::RBRACKET {
+                        break;
+                    } else {
+                        Err(ParserError::UnexpectedChar {
+                            expected: Some("] or ,".to_string()),
                             found: self.lexer.curr_ch(),
                             row: self.lexer.curr_tok().row,
                             col: self.lexer.curr_tok().col,
-                        });
+                        })?;
                     }
                 }
 
@@ -721,6 +740,18 @@ impl<'a> Parser<'a> {
                         let ret_type = self.find_func_ret_type(&name)?;
                         while self.lexer.curr_tok().token != TokenType::RPAREN {
                             args.push(self.expr()?);
+                            if self.lexer.curr_tok().token == TokenType::COMMA {
+                                self.lexer.next_token()?;
+                            } else if self.lexer.curr_tok().token == TokenType::RPAREN {
+                                break;
+                            } else {
+                                Err(ParserError::UnexpectedChar {
+                                    expected: Some(") or ,".to_string()),
+                                    found: self.lexer.curr_ch(),
+                                    row: self.lexer.curr_tok().row,
+                                    col: self.lexer.curr_tok().col,
+                                })?;
+                            }
                         }
                         self.lexer.next_token()?;
                         Ok(Expr::FuncCall(FuncCall {
@@ -856,6 +887,18 @@ impl<'a> Parser<'a> {
             }
             params.push((name, typ));
             self.lexer.next_token()?;
+            if self.lexer.curr_tok().token == TokenType::COMMA {
+                self.lexer.next_token()?;
+            } else if self.lexer.curr_tok().token == TokenType::RPAREN {
+                break;
+            } else {
+                Err(ParserError::UnexpectedChar {
+                    expected: Some(") or ,".to_string()),
+                    found: self.lexer.curr_ch(),
+                    row: self.lexer.curr_tok().row,
+                    col: self.lexer.curr_tok().col,
+                })?;
+            }
         }
         self.lexer.next_token()?;
         let ret_type: VarType;

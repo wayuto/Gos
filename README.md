@@ -47,9 +47,9 @@ sh ./install.sh
 let x: int = 42 
 let pi: flt = 3.14159
 let message: str = "Hello, Alum!"
-let flags: arr<3> = [1 2 3] 
-let dynamic: arr<_> = [1 2 3 4] # Length inferred as 4
-let filled: arr<5> = [0] # [0 0 0 0 0]
+let flags: arr<3> = [1, 2, 3] 
+let inferred: arr<_> = [1, 2, 3, 4] # Length inferred as 4
+let filled: arr<5> = [0] # [0, 0, 0, 0, 0]
 ```
 
 Floating-point numbers support all standard arithmetic operations (+, -, *, /)
@@ -89,36 +89,16 @@ let computed: int = {
 Alum includes a preprocessor that supports directives for code organization and
 reuse.
 
-### **$import**
-
-The `$import` directive includes external Alum source files into your program:
-
 ```alum
-$import "io"
-$import "math"
-```
+$ifndef MACRO
+$define MACRO 1
 
-The preprocessor searches for imported files in:
+$define DEBUG 1
+$ifdef DEBUG
+println("Debug mode enabled.")
+$endif
 
-1. The same directory as the current file
-2. `/usr/local/alum/` (standard library location)
-
-### **$define**
-
-The `$define` directive allows you to define macros for text substitution:
-
-```alum
-$define PI 3.14159
-$define MAX_SIZE 100
-$define GREETING "Hello, Alum!"
-
-pub fun main(): int {
-  let arr: arr<MAX_SIZE> = [0]
-  let radius: flt = 5.0
-  let area: flt = PI * radius * radius
-  println(GREETING)
-  return 0
-}
+$endif
 ```
 
 Macros are simple text replacements that occur during preprocessing. They can be
@@ -130,14 +110,14 @@ are not currently supported.
 The Alum Standard Library provides essential functionality out of the box. Use
 `$import` to include them.
 
-| Module      | Key Functions                          |
-| :---------- | :------------------------------------- |
-| **io**      | print, println, input, read, write     |
-| **math**    | abs, sqrt, max, min, pow, fact         |
-| **string**  | strlen, strcpy, strcat, memcpy, memset |
-| **convert** | itoa, atoi, ftoa, atof                 |
-| **array**   | range, find                            |
-| **stdlib**  | syscall, exit                          |
+| Module      | Key Functions                                                           |
+| :---------- | :---------------------------------------------------------------------- |
+| **io**      | print, println, input, read, write, fopen, fclose, lseek, fread, fwrite |
+| **math**    | abs, sqrt, max, min, pow, fact, PI, E                                   |
+| **string**  | strlen, strcpy, strcat, memcpy, memset                                  |
+| **convert** | itoa, atoi, ftoa, atof                                                  |
+| **array**   | range, find                                                             |
+| **stdlib**  | syscall, exit                                                           |
 
 ## **💻 Language Examples**
 
@@ -202,7 +182,7 @@ pub fun main(): int {
 # Use `pub` to make it visible to the linker
 
 ```
-pub fun add(x: int y: int): int {
+pub fun add(x: int, y: int): int {
   return x + y
 }
 ```

@@ -1,6 +1,9 @@
-extern range(int int): arr<_>
+$ifndef ALUM_ARRAY
+$define ALUM_ARRAY 1
 
-pub fun find(a: arr<_> e: int): int {
+extern range(int, int): arr<_>
+
+pub fun find(a: arr<_>, e: int): int {
     let i: int = 0
     while i < sizeof a {
         if a[i] == e {
@@ -10,3 +13,5 @@ pub fun find(a: arr<_> e: int): int {
     }
     return (-1)
 }
+
+$endif

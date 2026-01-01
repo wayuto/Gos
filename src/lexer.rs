@@ -749,6 +749,15 @@ impl<'a> Lexer<'a> {
             };
             self.bump();
             return Ok(());
+        } else if self.current() == ',' {
+            self.tok = Token {
+                token: TokenType::COMMA,
+                value: None,
+                row: self.tok.row,
+                col: self.tok.col,
+            };
+            self.bump();
+            return Ok(());
         } else if self.current() == '#' {
             while self.current() != '\n' && self.current() != '\0' {
                 self.bump();

@@ -12,6 +12,16 @@ pub enum PreprocessorError {
         row: usize,
         col: usize,
     },
+    UnexpectedEndOfFile {
+        expected: String,
+        row: usize,
+        col: usize,
+    },
+    ConditionError {
+        message: String,
+        row: usize,
+        col: usize,
+    },
 }
 
 impl std::error::Error for PreprocessorError {}
@@ -29,6 +39,16 @@ impl std::fmt::Display for PreprocessorError {
             PreprocessorError::IoError { message, row, col } => {
                 write!(f, "IO error at {}:{}: {}", row, col, message)
             }
+            PreprocessorError::UnexpectedEndOfFile { expected, row, col } => {
+                write!(
+                    f,
+                    "Unexpected end of file at {}:{}: expected {}",
+                    row, col, expected
+                )
+            }
+            PreprocessorError::ConditionError { message, row, col } => {
+                write!(f, "Condition error at {}:{}: {}", row, col, message)
+            }
         }
     }
 }
@@ -38,8 +58,9 @@ pub struct Preprocessor<'a> {
     path: String,
     row: usize,
     col: usize,
-
     defines: HashMap<String, String>,
+    condition_stack: Vec<bool>,
+    skipping: bool,
 }
 
 impl<'a> Preprocessor<'a> {
@@ -50,6 +71,8 @@ impl<'a> Preprocessor<'a> {
             row: 1,
             col: 0,
             defines: HashMap::new(),
+            condition_stack: Vec::new(),
+            skipping: false,
         }
     }
 
@@ -74,6 +97,12 @@ impl<'a> Preprocessor<'a> {
         }
     }
 
+    fn skip_until_newline(&mut self) {
+        while self.current() != '\n' && self.current() != '\0' {
+            self.bump();
+        }
+    }
+
     fn parse_ident(&mut self) -> String {
         let mut ident = String::new();
         if self.current().is_ascii_alphabetic() || self.current() == '_' {
@@ -87,7 +116,7 @@ impl<'a> Preprocessor<'a> {
         ident
     }
 
-    fn parser_file_path(&mut self) -> Option<String> {
+    fn parse_file_path(&mut self) -> Option<String> {
         self.skip_spaces();
         if self.current() != '"' {
             return None;
@@ -105,10 +134,78 @@ impl<'a> Preprocessor<'a> {
         None
     }
 
+    fn expand_macros(&self, value: &str) -> String {
+        let mut result = value.to_string();
+        let mut changed = true;
+
+        while changed {
+            changed = false;
+            for (name, val) in &self.defines {
+                let pattern = format!("${}", name);
+                if result.contains(&pattern) {
+                    result = result.replace(&pattern, val);
+                    changed = true;
+                }
+            }
+        }
+
+        result
+    }
+
+    fn check_condition(&mut self, negated: bool) -> bool {
+        self.skip_spaces();
+        let ident = self.parse_ident();
+        let defined = self.defines.contains_key(&ident);
+
+        if negated { !defined } else { defined }
+    }
+
     pub fn preprocess(&mut self) -> Result<String, PreprocessorError> {
         let mut output = String::new();
+        let mut in_comment = false;
 
         while self.current() != '\0' {
+            if self.current() == '#' {
+                while self.current() != '\n' && self.current() != '\0' {
+                    self.bump();
+                }
+                continue;
+            }
+
+            if self.skipping {
+                if self.current() == '$' {
+                    self.bump();
+                    let cmd = self.parse_ident();
+
+                    match cmd.as_str() {
+                        "ifdef" | "ifndef" => {
+                            self.skip_spaces();
+                            self.parse_ident();
+
+                            self.condition_stack.push(false);
+                        }
+                        "endif" => {
+                            if let Some(_) = self.condition_stack.pop() {
+                                self.skipping = !self.condition_stack.is_empty()
+                                    && self.condition_stack.last().map(|&s| !s).unwrap_or(false);
+                            } else {
+                                return Err(PreprocessorError::ConditionError {
+                                    message: "Unexpected $endif".to_string(),
+                                    row: self.row,
+                                    col: self.col,
+                                });
+                            }
+                        }
+                        _ => {
+                            self.skip_until_newline();
+                        }
+                    }
+                } else {
+                    self.bump();
+                }
+                continue;
+            }
+
             if self.current() == '$' {
                 self.bump();
                 let cmd = self.parse_ident();
@@ -118,17 +215,43 @@ impl<'a> Preprocessor<'a> {
                         self.skip_spaces();
                         let name = self.parse_ident();
                         self.skip_spaces();
-                        let mut value = String::new();
 
+                        let mut value = String::new();
                         while self.current() != '\n' && self.current() != '\0' {
                             value.push(self.current());
                             self.bump();
                         }
-                        self.defines.insert(name, value.trim().to_string());
+
+                        let value = value.trim().to_string();
+
+                        let expanded_value = self.expand_macros(&value);
+                        self.defines.insert(name, expanded_value);
+                    }
+                    "ifdef" => {
+                        let condition_met = self.check_condition(false);
+                        self.condition_stack.push(condition_met);
+                        self.skipping = !condition_met;
+                    }
+                    "ifndef" => {
+                        let condition_met = self.check_condition(true);
+                        self.condition_stack.push(condition_met);
+                        self.skipping = !condition_met;
+                    }
+                    "endif" => {
+                        if let Some(_) = self.condition_stack.pop() {
+                            self.skipping = !self.condition_stack.is_empty()
+                                && self.condition_stack.last().map(|&s| !s).unwrap_or(false);
+                        } else {
+                            return Err(PreprocessorError::ConditionError {
+                                message: "Unexpected $endif".to_string(),
+                                row: self.row,
+                                col: self.col,
+                            });
+                        }
                     }
                     "import" => {
                         let file_name =
-                            self.parser_file_path().ok_or(PreprocessorError::IoError {
+                            self.parse_file_path().ok_or(PreprocessorError::IoError {
                                 message: "Invalid import path".to_string(),
                                 row: self.row,
                                 col: self.col,
@@ -167,12 +290,9 @@ impl<'a> Preprocessor<'a> {
 
                         if let Some(content) = raw_content {
                             let mut child_pp = Preprocessor::new(&content, self.path.clone());
-
                             child_pp.defines = self.defines.clone();
-
                             let processed_sub = child_pp.preprocess()?;
                             output.push_str(&processed_sub);
-
                             self.defines = child_pp.defines;
                         } else {
                             return Err(PreprocessorError::ImportError {
@@ -191,18 +311,31 @@ impl<'a> Preprocessor<'a> {
                         }
                     }
                 }
-            } else if self.current().is_ascii_alphabetic() || self.current() == '_' {
-                let ident = self.parse_ident();
-                if let Some(val) = self.defines.get(&ident) {
-                    output.push_str(val);
-                } else {
-                    output.push_str(&ident);
-                }
             } else {
-                output.push(self.current());
-                self.bump();
+                if self.current().is_ascii_alphabetic() || self.current() == '_' {
+                    let start_col = self.col;
+                    let ident = self.parse_ident();
+
+                    if let Some(val) = self.defines.get(&ident) {
+                        output.push_str(val);
+                    } else {
+                        output.push_str(&ident);
+                    }
+                } else {
+                    output.push(self.current());
+                    self.bump();
+                }
             }
         }
+
+        if !self.condition_stack.is_empty() {
+            return Err(PreprocessorError::ConditionError {
+                message: "Unclosed $ifdef or $ifndef".to_string(),
+                row: self.row,
+                col: self.col,
+            });
+        }
+
         Ok(output)
     }
 }

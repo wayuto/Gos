@@ -142,7 +142,7 @@
 			"patterns": [
 				{
 					"name": "support.function.builtin.alum",
-					"match": "\\b(println|print|input|read|write|fopen|fread|fwrite|fclose|lseek|abs|sqrt|max|min|pow|fact|strlen|strcpy|strcat|memcpy|memset|itoa|atoi|ftoa|atof|range|find|syscall|exit)\\b"
+					"match": "\\b(println|print|input|read|write|fopen|fread|fwrite|fclose|lseek|abs|sqrt|max|min|pow|fact|strlen|strcpy|strcat|memcpy|memset|memcmp|bcmp|itoa|atoi|ftoa|atof|range|find|syscall|exit)\\b"
 				}
 			]
 		},

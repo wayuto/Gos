@@ -101,7 +101,44 @@ impl CodeGen {
         for func in take(&mut self.program.functions) {
             self.compile_fn(func)?;
         }
-        Ok(take(&mut self.data) + &self.text)
+        Ok(take(&mut self.data) + &self.optim(self.text.clone()))
+    }
+
+    fn optim(&mut self, src: String) -> String {
+        let lines: Vec<String> = src.lines().map(|s| s.to_string()).collect();
+        let mut result = Vec::new();
+        let mut i = 0;
+
+        while i < lines.len() {
+            let current = lines[i].trim();
+
+            if let Some(push_reg) = current.strip_prefix("push ") {
+                if i + 1 < lines.len() {
+                    let next = lines[i + 1].trim();
+
+                    if let Some(pop_reg) = next.strip_prefix("pop ") {
+                        let push_reg = push_reg.trim();
+                        let pop_reg = pop_reg.trim();
+
+                        if push_reg == pop_reg {
+                            i += 2;
+                            continue;
+                        } else {
+                            result.push(format!("mov {}, {}", pop_reg, push_reg));
+                            i += 2;
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            result.push(lines[i].clone());
+            i += 1;
+        }
+
+        let opt = result.join("\n");
+
+        if opt == src { opt } else { self.optim(opt) }
     }
 
     fn compile_code(&mut self, code: Instruction) -> Result<(), CodeGenError> {

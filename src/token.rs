@@ -51,6 +51,7 @@ pub enum TokenType {
     Type(VarType),
     SIZEOF,
     RANGE,
+    COMMA,
     EOF,
 }
 

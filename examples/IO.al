@@ -6,14 +6,14 @@ pub fun main(): int {
     let filename: str = input("File Name: ")
 
     # Write file
-    let fd: int = fopen(filename 577 420)
+    let fd: int = fopen(filename, O_WRONLY | O_CREAT | O_TRUNC, 420)
     let raw: str = "Hello Alum!"
     let len: int = strlen(raw)
-    fwrite(fd raw len)
+    fwrite(fd, raw, len)
     fclose(fd)
     
     # Read file
-    let fp: int = fopen(filename 0 0)
+    let fp: int = fopen(filename, O_RDONLY, 0)
     let ctx: str = fread(fp)
     println(ctx)
     fclose(fp)

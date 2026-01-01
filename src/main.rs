@@ -160,7 +160,7 @@ fn compile(
 
 fn main() {
     let cmd = Command::new("al")
-        .version("0.6.0#happy 2026!")
+        .version("0.6.1#happy 2026!")
         .about("The Alum programming language compiler")
         .arg_required_else_help(true)
         .arg(
@@ -253,7 +253,7 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("al: error: {}", e);
+        eprintln!("{}", e);
         std::process::exit(1);
     }
 }
