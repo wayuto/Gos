@@ -126,7 +126,7 @@ The Alum Standard Library provides essential functionality out of the box. Use
 | **math**    | abs, sqrt, max, min, pow, fact, PI, E                                   |
 | **string**  | strlen, strcpy, strcat, memcpy, memset                                  |
 | **convert** | itoa, atoi, ftoa, atof                                                  |
-| **array**   | range, find                                                             |
+| **array**   | range                                                                   |
 | **stdlib**  | syscall, exit                                                           |
 
 ## **💻 Language Examples**
