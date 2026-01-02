@@ -459,18 +459,6 @@ impl IRGen {
                             src1: Some(argument.clone()),
                             src2: None,
                         }),
-                        TokenType::INC => ctx.instructions.push(Instruction {
-                            op: Op::FAdd,
-                            dst: Some(res_tmp.clone()),
-                            src1: Some(argument.clone()),
-                            src2: Some(Operand::Const(IRConst::Float(OrderedFloat(1.0)))),
-                        }),
-                        TokenType::DEC => ctx.instructions.push(Instruction {
-                            op: Op::FSub,
-                            dst: Some(res_tmp.clone()),
-                            src1: Some(argument.clone()),
-                            src2: Some(Operand::Const(IRConst::Float(OrderedFloat(1.0)))),
-                        }),
                         _ => {
                             return Err(IRGenError::TypeError {
                                 message: "unsupported float unary operation".to_string(),
@@ -480,8 +468,7 @@ impl IRGen {
                     _ => ctx.instructions.push(Instruction {
                         op: match unary.operator {
                             TokenType::NEG => Op::Neg,
-                            TokenType::INC => Op::Inc,
-                            TokenType::DEC => Op::Dec,
+                            TokenType::LOGNOT => Op::Not,
                             TokenType::SIZEOF => Op::SizeOf,
                             _ => {
                                 return Err(IRGenError::TypeError {

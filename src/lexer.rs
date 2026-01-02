@@ -490,9 +490,9 @@ impl<'a> Lexer<'a> {
                 return Ok(());
             }
             self.bump();
-            if self.current() == '+' {
+            if self.current() == '=' {
                 self.tok = Token {
-                    token: TokenType::INC,
+                    token: TokenType::ADDEQ,
                     value: None,
                     row: self.tok.row,
                     col: self.tok.col,
@@ -519,9 +519,9 @@ impl<'a> Lexer<'a> {
                 return Ok(());
             }
             self.bump();
-            if self.current() == '-' {
+            if self.current() == '=' {
                 self.tok = Token {
-                    token: TokenType::DEC,
+                    token: TokenType::SUBEQ,
                     value: None,
                     row: self.tok.row,
                     col: self.tok.col,
@@ -537,22 +537,42 @@ impl<'a> Lexer<'a> {
             };
             return Ok(());
         } else if self.current() == '*' {
+            self.bump();
+            if self.current() == '=' {
+                self.tok = Token {
+                    token: TokenType::MULEQ,
+                    value: None,
+                    row: self.tok.row,
+                    col: self.tok.col,
+                };
+                self.bump();
+                return Ok(());
+            }
             self.tok = Token {
                 token: TokenType::MUL,
                 value: None,
                 row: self.tok.row,
                 col: self.tok.col,
             };
-            self.bump();
             return Ok(());
         } else if self.current() == '/' {
+            self.bump();
+            if self.current() == '=' {
+                self.tok = Token {
+                    token: TokenType::DIVEQ,
+                    value: None,
+                    row: self.tok.row,
+                    col: self.tok.col,
+                };
+                self.bump();
+                return Ok(());
+            }
             self.tok = Token {
                 token: TokenType::DIV,
                 value: None,
                 row: self.tok.row,
                 col: self.tok.col,
             };
-            self.bump();
             return Ok(());
         } else if self.current() == '(' {
             self.tok = Token {

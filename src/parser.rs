@@ -492,19 +492,6 @@ impl<'a> Parser<'a> {
                                 typ: VarType::Bool,
                             });
                         }
-                        TokenType::RANGE => {
-                            let mut arr: Vec<Expr> = Vec::new();
-                            for i in n..m {
-                                arr.push(Expr::Val(Val {
-                                    value: Literal::Int(i),
-                                    typ: VarType::Int,
-                                }));
-                            }
-                            left = Expr::Val(Val {
-                                value: Literal::Array((m - n) as usize, arr),
-                                typ: VarType::Array(Some((m - n) as usize)),
-                            });
-                        }
                         _ => {}
                     },
                     (Literal::Bool(n), Literal::Bool(m)) => match op.clone() {
@@ -720,20 +707,6 @@ impl<'a> Parser<'a> {
                         self.lexer.next_token()?;
                         Ok(Expr::Label(Label { name: name }))
                     }
-                    TokenType::INC => {
-                        self.lexer.next_token()?;
-                        Ok(Expr::UnaryOp(UnaryOp {
-                            argument: Box::new(Expr::Var(Var { name: name })),
-                            operator: TokenType::INC,
-                        }))
-                    }
-                    TokenType::DEC => {
-                        self.lexer.next_token()?;
-                        Ok(Expr::UnaryOp(UnaryOp {
-                            argument: Box::new(Expr::Var(Var { name: name })),
-                            operator: TokenType::DEC,
-                        }))
-                    }
                     TokenType::LPAREN => {
                         self.lexer.next_token()?;
                         let mut args: Vec<Expr> = Vec::new();
@@ -766,6 +739,54 @@ impl<'a> Parser<'a> {
                         Ok(Expr::VarMod(VarMod {
                             name,
                             value: Box::new(val),
+                        }))
+                    }
+                    TokenType::ADDEQ => {
+                        self.lexer.next_token()?;
+                        let val = self.expr()?;
+                        Ok(Expr::VarMod(VarMod {
+                            name: name.clone(),
+                            value: Box::new(Expr::BinOp(BinOp {
+                                left: Box::new(Expr::Var(Var { name })),
+                                right: Box::new(val),
+                                operator: TokenType::ADD,
+                            })),
+                        }))
+                    }
+                    TokenType::SUBEQ => {
+                        self.lexer.next_token()?;
+                        let val = self.expr()?;
+                        Ok(Expr::VarMod(VarMod {
+                            name: name.clone(),
+                            value: Box::new(Expr::BinOp(BinOp {
+                                left: Box::new(Expr::Var(Var { name })),
+                                right: Box::new(val),
+                                operator: TokenType::SUB,
+                            })),
+                        }))
+                    }
+                    TokenType::MULEQ => {
+                        self.lexer.next_token()?;
+                        let val = self.expr()?;
+                        Ok(Expr::VarMod(VarMod {
+                            name: name.clone(),
+                            value: Box::new(Expr::BinOp(BinOp {
+                                left: Box::new(Expr::Var(Var { name })),
+                                right: Box::new(val),
+                                operator: TokenType::MUL,
+                            })),
+                        }))
+                    }
+                    TokenType::DIVEQ => {
+                        self.lexer.next_token()?;
+                        let val = self.expr()?;
+                        Ok(Expr::VarMod(VarMod {
+                            name: name.clone(),
+                            value: Box::new(Expr::BinOp(BinOp {
+                                left: Box::new(Expr::Var(Var { name })),
+                                right: Box::new(val),
+                                operator: TokenType::DIV,
+                            })),
                         }))
                     }
                     TokenType::LBRACKET => {

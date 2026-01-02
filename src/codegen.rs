@@ -236,7 +236,7 @@ impl CodeGen {
                 self.regs.insert("xmm0".to_string(), Some(dst.clone()));
                 Ok(())
             }
-            Op::Add | Op::Sub | Op::Mul | Op::Div | Op::LAnd | Op::LOr | Op::Xor => {
+            Op::Add | Op::Sub | Op::Mul | Op::Div | Op::LAnd | Op::LOr | Op::Xor | Op::Not => {
                 let dst = code
                     .dst
                     .as_ref()
@@ -256,7 +256,6 @@ impl CodeGen {
                         message: "Binary operation requires src2".to_string(),
                     })?;
                 let asm_op = self.get_asm_op(&code.op).to_string();
-
                 self.load(src1, "rax");
 
                 match src2 {
@@ -420,7 +419,7 @@ impl CodeGen {
                 self.regs.insert("rax".to_string(), Some(dst.clone()));
                 Ok(())
             }
-            Op::Neg | Op::Inc | Op::Dec | Op::SizeOf => {
+            Op::SizeOf => {
                 let dst = code
                     .dst
                     .as_ref()
@@ -434,13 +433,7 @@ impl CodeGen {
                         message: "Unary operation requires src1".to_string(),
                     })?;
                 self.load(src1, "rax");
-                match code.op {
-                    Op::Neg => assemble!(self.text, "neg rax"),
-                    Op::Inc => assemble!(self.text, "inc rax"),
-                    Op::Dec => assemble!(self.text, "dec rax"),
-                    Op::SizeOf => assemble!(self.text, "mov rax, [rax]"),
-                    _ => unreachable!(),
-                }
+                assemble!(self.text, "mov rax, [rax]");
                 assemble!(self.text, "mov [rbp - {}], rax", self.get_offset(dst)?);
                 self.regs.clear();
                 self.regs.insert("rax".to_string(), Some(dst.clone()));
@@ -949,9 +942,10 @@ impl CodeGen {
             Op::Add => "add",
             Op::Sub => "sub",
             Op::Mul => "imul",
-            Op::LAnd => "and",
-            Op::LOr => "or",
+            Op::LAnd | Op::Add => "and",
+            Op::LOr | Op::Or => "or",
             Op::Xor => "xor",
+            Op::Not => "not",
             _ => "",
         }
     }
