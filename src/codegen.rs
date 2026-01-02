@@ -875,6 +875,10 @@ impl CodeGen {
             self.lbl_cnt += 1;
             let bytes = s.as_bytes();
             let len = bytes.len();
+            if s.is_empty() {
+                assemble!(self.data, "{} db 0", lbl,);
+                return lbl;
+            }
             assemble!(
                 self.data,
                 "{} db {}, 0",
