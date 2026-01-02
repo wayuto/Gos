@@ -41,6 +41,16 @@ sh ./install.sh
 - `arr<N>`: Fixed-size arrays (e.g., arr<5>).
 - `void`: Used for functions that do not return a value.
 
+### **Operators**
+| Level | Operators                               |
+| :---- | :-------------------------------------- |
+| 1     | `=` `+=` `-=` `*=` `/=`                 |
+| 2     | `(` `)`                                 |
+| 3     | `*` `/`                                 |
+| 4     | `+` `-`                                 |
+| 5     | `==` `!=` `<` `>` `<=` `>=` `&&` `\|\|` |
+| 6     | `&`  `^`  `\|`                          |
+
 ### **Variables**
 
 ```

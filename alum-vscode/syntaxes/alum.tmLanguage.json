@@ -213,15 +213,15 @@
 				},
 				{
 					"name": "keyword.operator.assignment.alum",
-					"match": "="
+					"match": "=|+=|-=|*=|/="
 				},
 				{
 					"name": "keyword.operator.comparison.alum",
 					"match": "==|!=|>|<|>=|<="
 				},
 				{
-					"name": "keyword.operator.increment-decrement.alum",
-					"match": "\\+\\+|--"
+					"name": "keyword.operator.logical.alum",
+					"match": "&|\\||^"
 				},
 				{
 					"name": "keyword.operator.access.alum",
@@ -229,7 +229,7 @@
 				},
 				{
 					"name": "keyword.operator.range.alum",
-					"match": "\\.\\."
+					"match": "~"
 				}
 			]
 		}
