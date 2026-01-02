@@ -7,10 +7,11 @@ $define BEGIN {
 $define END return 0 }
 
 $ifdef MACRO
-$define ENTRY pub fun main(): int
+$define MAIN pub fun main(): int
 $define PRINT println
 
-MAIN BEGIN
+MAIN
+BEGIN
     PRINT("WORKS!")
 END
 
